@@ -14,6 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { fetchSinglePreview, toggleTopicContentRead } from '../../../redux/slices/courseSlice';
+import { formatImageUrl } from '../../../utils/imageUtils';
 
 // ─────────────────────────────────────────────────────────────
 // Simple HTML → React Native renderer (no external library)
@@ -192,7 +193,7 @@ const HtmlRenderer = ({ html }) => {
           return (
             <View key={i} style={htmlStyles.imageContainer}>
               <Image
-                source={{ uri: block.src }}
+                source={formatImageUrl(block.src)}
                 style={htmlStyles.image}
                 resizeMode="contain"
               />

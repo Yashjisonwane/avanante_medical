@@ -33,7 +33,6 @@ export default function LoginScreen() {
   const { t } = useTranslation();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [isLangModalVisible, setIsLangModalVisible] = useState(false);
   const dispatch = useDispatch();
   const { actionLoading, errorMessage } = useSelector((state) => state.auth);
@@ -85,7 +84,7 @@ export default function LoginScreen() {
         >
           {/* Language Selector */}
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.languageSelector}
               onPress={() => setIsLangModalVisible(true)}
             >
@@ -127,17 +126,7 @@ export default function LoginScreen() {
               }
             />
 
-            {/* Checkbox */}
-            <TouchableOpacity
-              style={styles.checkboxContainer}
-              onPress={() => setStayLoggedIn(!stayLoggedIn)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.checkbox, stayLoggedIn && styles.checkboxActive]}>
-                {stayLoggedIn && <View style={styles.checkboxInner} />}
-              </View>
-              <Text style={styles.checkboxLabel}>{t('auth.stay_logged_in')}</Text>
-            </TouchableOpacity>
+
 
             <CustomButton
               title={actionLoading.login ? 'Please wait...' : t('auth.login_button')}
@@ -183,7 +172,7 @@ export default function LoginScreen() {
         animationType="fade"
         onRequestClose={() => setIsLangModalVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={modalStyles.overlay}
           activeOpacity={1}
           onPress={() => setIsLangModalVisible(false)}
@@ -198,7 +187,7 @@ export default function LoginScreen() {
               ]}
               keyExtractor={(item) => item.code}
               renderItem={({ item }) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[
                     modalStyles.item,
                     i18n.language === item.code && modalStyles.itemActive
@@ -330,36 +319,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 5,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: '#ddd',
-    marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxActive: {
-    borderColor: '#24458B',
-    backgroundColor: '#24458B',
-  },
-  checkboxInner: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#fff',
-    borderRadius: 1,
-  },
-  checkboxLabel: {
-    fontSize: 15,
-    color: '#666',
-  },
+
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',

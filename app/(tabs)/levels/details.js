@@ -17,6 +17,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
 import { fetchLevelProgress } from '../../../redux/slices/courseSlice';
+import { formatImageUrl } from '../../../utils/imageUtils';
 
 const ModuleItem = ({ moduleData, isCurrent }) => {
   const router = useRouter();
@@ -179,7 +180,7 @@ export default function LevelDetailsScreen() {
         {/* Banner Section */}
         <View style={styles.bannerContainer}>
           <ImageBackground 
-            source={currentLevel?.thumbnail ? { uri: currentLevel.thumbnail } : require('../../../assets/level-detail-1.png')} 
+            source={formatImageUrl(currentLevel?.thumbnail) || require('../../../assets/level-detail-1.png')} 
             style={styles.banner}
             imageStyle={styles.bannerImage}
           >

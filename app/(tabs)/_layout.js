@@ -100,9 +100,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="assessment"
+        name="assessment/index"
         options={{
-          title: t('tabs.assessment', { defaultValue: 'Assessment' }),
+          title: t('tabs.assessment'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name={isTabActive('assessment') ? "clipboard" : "clipboard-outline"} size={26} color={isTabActive('assessment') ? AppColors.primary : color} />
           ),

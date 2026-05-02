@@ -18,6 +18,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
 import { logoutUser, fetchProfile, updateProfile } from '../../../redux/slices/authSlice';
+import { formatImageUrl } from '../../../utils/imageUtils';
 
 const MenuItem = ({ icon, label, onPress, isLogout = false }) => (
   <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
@@ -157,7 +158,7 @@ export default function ProfileScreen() {
           <View style={styles.avatarWrapper}>
             <TouchableOpacity onPress={handleImagePick} disabled={uploading}>
               <Image 
-                source={{ uri: user?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg' }} 
+                source={formatImageUrl(user?.avatar) || { uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
                 style={[styles.avatar, uploading && { opacity: 0.5 }]} 
               />
               <View style={styles.cameraBtn}>

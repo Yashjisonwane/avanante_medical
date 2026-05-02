@@ -221,6 +221,16 @@ const courseSlice = createSlice({
         question.selected_option_id = optionId;
       }
     },
+    resetAssessment: (state) => {
+      state.assessment = {
+        details: null,
+        questions: [],
+        currentAttemptId: null,
+        result: null,
+        loading: false,
+        error: null,
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -400,5 +410,5 @@ const courseSlice = createSlice({
   },
 });
 
-export const { clearCourseError, clearTopicContent, updateQuestionAnswer } = courseSlice.actions;
+export const { clearCourseError, clearTopicContent, updateQuestionAnswer, resetAssessment } = courseSlice.actions;
 export default courseSlice.reducer;
