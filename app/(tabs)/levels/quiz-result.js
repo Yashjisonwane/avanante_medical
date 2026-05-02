@@ -1,137 +1,252 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
-import { wp, hp, ms, fs, SCREEN_WIDTH } from '../../../utils/responsive';
-import { AppColors } from '../../../constants/Theme';
-
-const ConfettiBackground = () => (
-  <View style={StyleSheet.absoluteFill} pointerEvents="none">
-    <View style={[styles.shape, { top: hp(50), left: wp(20), width: wp(40), height: hp(12), backgroundColor: '#FFB74D', transform: [{ rotate: '45deg' }] }]} />
-    <View style={[styles.shape, { top: hp(30), left: SCREEN_WIDTH / 2 - wp(50), width: wp(30), height: hp(10), backgroundColor: '#EC407A', transform: [{ rotate: '-30deg' }, { scaleX: -1 }] }]} />
-    <View style={[styles.shape, { top: hp(90), right: wp(-15), width: wp(45), height: hp(12), backgroundColor: '#E91E63', transform: [{ rotate: '-45deg' }] }]} />
-    <View style={[styles.shape, { top: hp(120), left: wp(30), width: wp(35), height: hp(10), backgroundColor: '#5E35B1', transform: [{ rotate: '30deg' }] }]} />
-    <View style={[styles.shape, { top: hp(200), right: wp(40), width: wp(40), height: hp(12), backgroundColor: '#FFA726', transform: [{ rotate: '50deg' }] }]} />
-    <View style={[styles.shape, { top: hp(350), left: wp(10), width: wp(50), height: hp(14), backgroundColor: '#FF8A65', transform: [{ rotate: '-25deg' }] }]} />
-    <View style={[styles.shape, { top: hp(400), right: wp(30), width: wp(50), height: hp(14), backgroundColor: '#7E57C2', transform: [{ rotate: '60deg' }] }]} />
-    <View style={[styles.shape, { top: hp(450), left: '40%', width: wp(40), height: hp(12), backgroundColor: '#5C6BC0', transform: [{ rotate: '80deg' }] }]} />
-  </View>
-);
+import { useDispatch, useSelector } from 'react-redux';
+import { wp, hp, ms, fs } from '../../../utils/responsive';
+import { submitAssessmentFeedback } from '../../../redux/slices/courseSlice';
 
 export default function QuizResultScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const dispatch = useDispatch();
   const { t } = useTranslation();
   
-  const { result } = useSelector((state) => state.course.assessment);
+  const { result, details } = useSelector((state) => state.course.assessment);
+  
+  // Get IDs from params or Redux state
+  const assessment_id = params.assessment_id || details?.assessment_id || result?.assessment_id;
+  const attempt_id = params.attempt_id || result?.attempt_id || result?.id;
 
-  const score = result?.score || 0;
-  const correct = result?.correct_answers_count || 0;
-  const incorrect = result?.incorrect_answers_count || 0;
-  const totalAttempts = result?.total_attempts || 1;
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+ 
+  const score = result?.percentage || result?.score || 0;
+  const total = result?.total || 5;
+  const correct = result?.correct || 0;
+  const wrong = result?.wrong || 0;
+  const skipped = result?.skipped || 0;
+  const status = result?.status || 'failed';
+  const timeTakenSec = result?.time_taken_seconds || 0;
+  const timeTakenMin = result?.time_taken_minutes || 0;
+
+  const handleFeedbackSubmit = async () => {
+    if (rating === 0) {
+      Alert.alert('Rating Required', 'Please select a rating before submitting.');
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+
+    if (!assessment_id || !attempt_id) {
+      Alert.alert('Error', 'Session information missing. Cannot submit feedback.');
+      setIsSubmittingFeedback(false);
+      return;
+    }
+
+    try {
+      await dispatch(submitAssessmentFeedback({
+        assessmentId: assessment_id,
+        payload: {
+          attempt_id: attempt_id,
+          rating: rating,
+          review: review
+        }
+      })).unwrap();
+      setFeedbackSubmitted(true);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  const formatTime = () => {
+    if (timeTakenMin > 0) {
+      const mins = Math.floor(timeTakenMin);
+      const secs = Math.round((timeTakenMin % 1) * 60);
+      return `${mins}m ${secs}s`;
+    }
+    const mins = Math.floor(timeTakenSec / 60);
+    const secs = Math.round(timeTakenSec % 60);
+    return `${mins}m ${secs}s`;
+  };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + hp(5) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={ms(24)} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('exam.quiz_result')}</Text>
-        <View style={{ width: wp(40) }} />
-      </View>
-
       <ScrollView 
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + hp(10), paddingBottom: hp(120) }]}
         showsVerticalScrollIndicator={false}
       >
-        <ConfettiBackground />
-        
-        {/* Score Circle */}
-        <View style={styles.scoreSection}>
-           <View style={styles.scoreCircle}>
-              <Text style={styles.scoreText}>{score}%</Text>
-              <Text style={styles.scoreLabel}>{t('exam.score')}</Text>
+        {/* Header Section */}
+        <View style={styles.headerRow}>
+           <View style={styles.headerIconWrapper}>
+              <View style={styles.headerIconCircle}>
+                 <Ionicons name="close" size={ms(24)} color="#fff" />
+              </View>
+           </View>
+            <View>
+              <Text style={styles.headerTitle}>{t('exam.quiz_finished', 'Quiz Finished')}</Text>
+              <Text style={styles.headerSubtitle}>{t('exam.review_summary', 'Review your performance summary below')}</Text>
+            </View>
+        </View>
+
+        {/* Score Header Card */}
+        <View style={styles.scoreCard}>
+           <Text style={styles.bgScoreText}>{score}</Text>
+           <View style={styles.scoreCircleContainer}>
+               <View style={styles.scoreCircle}>
+                  <Text style={styles.scoreValueText}>{score}%</Text>
+                  <Text style={styles.scoreLabelText}>{t('exam.score', 'SCORE')}</Text>
+               </View>
+           </View>
+                      <Text style={styles.statusTitle}>
+              {score >= 50 ? t('exam.great_job', 'Great Job!') : t('exam.keep_practicing', 'Keep Practicing')}
+            </Text>
+            <Text style={styles.statusMessage}>
+              {score >= 50 ? t('exam.passed_msg', 'You have passed the assessment') : t('exam.failed_msg', "Don't give up, review and try again")}
+            </Text>
+
+           <View style={[styles.statusBadge, { backgroundColor: score >= 50 ? '#DCFCE7' : '#FEE2E2' }]}>
+              <Ionicons 
+                name={score >= 50 ? "trophy" : "ribbon"} 
+                size={ms(12)} 
+                color={score >= 50 ? "#16A34A" : "#E11D48"} 
+              />
+               <Text style={[styles.statusBadgeText, { color: score >= 50 ? "#16A34A" : "#E11D48" }]}>
+                 {status.toUpperCase()} • {t('exam.score', 'SCORE')}: {correct} / {total}
+               </Text>
            </View>
         </View>
 
-        {/* Congrats Box */}
-        <View style={styles.congratsBox}>
-           <Text style={styles.congratsTitle}>{score >= 50 ? t('exam.congratulations') : t('common.keep_trying')}</Text>
-           <Text style={styles.congratsDesc}>
-              {score >= 50 ? t('exam.success_msg') : t('exam.failure_msg')}
-           </Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>{t('exam.performance_details')}</Text>
-
+        {/* Quick Stats Row */}
         <View style={styles.statsRow}>
-           <View style={styles.statCardHalf}>
-              <View style={[styles.statIconBadge, { backgroundColor: '#E6F9F4' }]}>
-                 <Ionicons name="checkmark" size={ms(16)} color="#17B8A6" />
-              </View>
-              <View style={styles.statTexts}>
-                 <Text style={styles.statValue}>{correct}</Text>
-                 <Text style={styles.statLabel}>{t('exam.correct')}</Text>
-              </View>
-           </View>
+           <View style={styles.statBox}>
+              <View style={[styles.statIconCircle, { backgroundColor: '#ECFDF5' }]}>
+                 <Ionicons name="checkmark-circle-outline" size={ms(16)} color="#10B981" />
+               </View>
+               <Text style={styles.statValue}>{correct}</Text>
+               <Text style={styles.statLabel}>{t('exam.correct', 'CORRECT')}</Text>
+            </View>
 
-           <View style={styles.statCardHalf}>
-              <View style={[styles.statIconBadge, { backgroundColor: '#FDECEE' }]}>
-                 <Ionicons name="close" size={ms(16)} color="#E53935" />
-              </View>
-              <View style={styles.statTexts}>
-                 <Text style={styles.statValue}>{incorrect}</Text>
-                 <Text style={styles.statLabel}>{t('exam.incorrect')}</Text>
-              </View>
-           </View>
+           <View style={styles.statBox}>
+              <View style={[styles.statIconCircle, { backgroundColor: '#FEF2F2' }]}>
+                 <Ionicons name="close-circle-outline" size={ms(16)} color="#EF4444" />
+               </View>
+               <Text style={styles.statValue}>{wrong}</Text>
+               <Text style={styles.statLabel}>{t('exam.incorrect', 'INCORRECT')}</Text>
+            </View>
+
+           <View style={styles.statBox}>
+              <View style={[styles.statIconCircle, { backgroundColor: '#F8FAFC' }]}>
+                 <Ionicons name="timer-outline" size={ms(16)} color="#64748B" />
+               </View>
+               <Text style={styles.statValue}>{skipped}</Text>
+               <Text style={styles.statLabel}>{t('exam.skipped', 'SKIPPED')}</Text>
+            </View>
+
+           <View style={styles.statBox}>
+              <View style={[styles.statIconCircle, { backgroundColor: '#EFF6FF' }]}>
+                 <Ionicons name="trending-up-outline" size={ms(16)} color="#3B82F6" />
+               </View>
+               <Text style={styles.statValue}>{formatTime()}</Text>
+               <Text style={styles.statLabel}>{t('exam.time_spent', 'TIME SPENT')}</Text>
+            </View>
         </View>
 
-        <View style={styles.statCardFull}>
-           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={[styles.statIconBadge, { backgroundColor: '#F0F5FF' }]}>
-                 <Ionicons name="time" size={ms(16)} color="#3069F7" />
+        {/* Feedback Section */}
+        <View style={styles.feedbackCard}>
+            <View style={styles.cardHeader}>
+               <Ionicons name="chatbubble-ellipses-outline" size={ms(18)} color="#1E293B" />
+               <Text style={styles.cardTitle}>{t('exam.share_experience', 'Share Your Experience')}</Text>
+            </View>
+
+           {feedbackSubmitted ? (
+             <View style={styles.thanksContainer}>
+                 <View style={styles.thanksIconCircle}>
+                    <Ionicons name="heart" size={ms(30)} color="#EF4444" />
+                 </View>
+                 <Text style={styles.thanksTitle}>{t('common.thank_you', 'Thank you!')}</Text>
+                 <Text style={styles.thanksMessage}>{t('exam.feedback_thanks', 'Your feedback helps us improve.')}</Text>
               </View>
-              <Text style={styles.fullStatLabel}>{t('exam.total_attempts')}</Text>
-           </View>
-           <Text style={styles.fullStatValue}>{totalAttempts}</Text>
-        </View>
+            ) : (
+              <View style={styles.feedbackForm}>
+                 <Text style={styles.feedbackLabel}>{t('exam.rate_quiz', 'How would you rate this quiz?')}</Text>
+                 <View style={styles.starsRow}>
+                   {[1, 2, 3, 4, 5].map((s) => (
+                     <TouchableOpacity key={s} onPress={() => setRating(s)}>
+                        <Ionicons 
+                          name={s <= rating ? "star" : "star-outline"} 
+                          size={ms(30)} 
+                          color={s <= rating ? "#F59E0B" : "#CBD5E1"} 
+                        />
+                     </TouchableOpacity>
+                   ))}
+                </View>
 
-        {score >= 80 && (
-          <TouchableOpacity style={styles.certButton} onPress={() => router.push('/(tabs)/analytics/certificate')}>
-             <Text style={styles.certButtonText}>{t('exam.earn_cert')}</Text>
-          </TouchableOpacity>
-        )}
+                 <TextInput
+                   style={styles.commentInput}
+                   placeholder={t('exam.comment_placeholder', 'Additional comments (optional)...')}
+                   placeholderTextColor="#94A3B8"
+                  multiline
+                  numberOfLines={3}
+                  value={review}
+                  onChangeText={setReview}
+                  textAlignVertical="top"
+                />
 
-        <View style={styles.actionRow}>
-           <TouchableOpacity style={styles.actionBtn}>
-              <Ionicons name="eye-outline" size={ms(18)} color="#333" />
-              <Text style={styles.actionBtnText}>{t('exam.review')}</Text>
-           </TouchableOpacity>
-           <TouchableOpacity 
-             style={styles.actionBtn}
-             onPress={() => router.replace({
-               pathname: '/(tabs)/levels/exam',
-               params: { assessment_id: result?.assessment_id }
-             })}
-           >
-              <Ionicons name="refresh-outline" size={ms(18)} color="#333" />
-              <Text style={styles.actionBtnText}>{t('exam.retry')}</Text>
-           </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.submitFeedbackBtn, isSubmittingFeedback && { opacity: 0.7 }]}
+                  onPress={handleFeedbackSubmit}
+                  disabled={isSubmittingFeedback}
+                >
+                  {isSubmittingFeedback ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                   ) : (
+                     <>
+                       <Ionicons name="paper-plane" size={ms(16)} color="#fff" />
+                       <Text style={styles.submitFeedbackText}>{t('exam.submit_feedback', 'Submit Feedback')}</Text>
+                     </>
+                   )}
+                </TouchableOpacity>
+             </View>
+           )}
         </View>
       </ScrollView>
 
-      <View style={styles.fixedFooter}>
-        <Text style={styles.footerText}>Quiz ID: #CAR-1092-24 • Completed on Oct 24, 2023</Text>
+      {/* Bottom Actions */}
+      <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, hp(15)) }]}>
+            <TouchableOpacity 
+              style={styles.homeBtn}
+              onPress={() => router.replace('/(tabs)/home')}
+            >
+               <Text style={styles.homeBtnText}>{t('common.back_to_home', 'Back to Home')}</Text>
+            </TouchableOpacity>
+
+         <TouchableOpacity 
+           style={styles.retryBtn}
+           onPress={() => router.replace({
+             pathname: '/(tabs)/levels/exam',
+              params: { id: assessment_id }
+            })}
+          >
+             <Text style={styles.retryBtnText}>{t('exam.retry', 'Try Again')}</Text>
+          </TouchableOpacity>
       </View>
     </View>
   );
@@ -140,217 +255,285 @@ export default function QuizResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    backgroundColor: AppColors.primary,
-    paddingBottom: hp(10),
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(15),
-  },
-  backBtn: {
-    width: wp(40),
-    height: wp(40),
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: AppColors.textWhite,
-    fontSize: fs(16),
-    fontWeight: '700',
+    backgroundColor: '#FFFFFF',
   },
   content: {
-    padding: wp(16),
-    paddingBottom: hp(15),
+    paddingHorizontal: wp(20),
   },
-  shape: {
-    position: 'absolute',
-    borderRadius: ms(20),
-    opacity: 0.8,
-  },
-  scoreSection: {
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: hp(25),
     marginTop: hp(10),
-    marginBottom: hp(15),
   },
-  scoreCircle: {
-    width: wp(110),
-    height: wp(110),
-    borderRadius: wp(55),
-    borderWidth: 5,
-    borderColor: AppColors.teal,
-    backgroundColor: AppColors.backgroundWhite,
-    alignItems: 'center',
+  headerIconWrapper: {
+    marginRight: wp(15),
+  },
+  headerIconCircle: {
+    width: ms(50),
+    height: ms(50),
+    borderRadius: ms(12),
+    backgroundColor: '#E11D48',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: AppColors.teal,
+    alignItems: 'center',
+    shadowColor: '#E11D48',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  scoreText: {
-    fontSize: fs(30),
-    fontWeight: '900',
-    color: AppColors.textDark,
-  },
-  scoreLabel: {
-    fontSize: fs(10),
+  headerTitle: {
+    fontSize: fs(22),
     fontWeight: '800',
-    color: AppColors.textSecondary,
-    letterSpacing: 2,
+    color: '#1E3A8A',
+  },
+  headerSubtitle: {
+    fontSize: fs(13),
+    color: '#64748B',
+    fontWeight: '500',
     marginTop: hp(2),
   },
-  congratsBox: {
-    backgroundColor: '#F0FCFA',
-    padding: wp(14),
-    borderRadius: ms(14),
+  scoreCard: {
+    backgroundColor: '#FFF1F2',
+    borderRadius: ms(24),
+    paddingVertical: hp(40),
     alignItems: 'center',
-    marginBottom: hp(15),
+    marginBottom: hp(25),
+    borderWidth: 1,
+    borderColor: '#FFE4E6',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  congratsTitle: {
-    color: '#10967E',
-    fontSize: fs(16),
+  bgScoreText: {
+    position: 'absolute',
+    top: hp(10),
+    right: wp(10),
+    fontSize: fs(120),
+    fontWeight: '900',
+    color: '#000',
+    opacity: 0.02,
+  },
+  scoreCircleContainer: {
+    marginBottom: hp(20),
+  },
+  scoreCircle: {
+    width: ms(130),
+    height: ms(130),
+    borderRadius: ms(65),
+    borderWidth: 10,
+    borderColor: '#FFE4E6',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  scoreValueText: {
+    fontSize: fs(28),
     fontWeight: '800',
-    marginBottom: hp(4),
+    color: '#1E293B',
   },
-  congratsDesc: {
-    color: '#10967E',
-    fontSize: fs(13),
-    textAlign: 'center',
-    fontWeight: '500',
-    lineHeight: fs(20),
-  },
-  sectionTitle: {
+  scoreLabelText: {
     fontSize: fs(10),
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 1,
+  },
+  statusTitle: {
+    fontSize: fs(26),
     fontWeight: '800',
-    color: '#8A94A6',
-    letterSpacing: 1.2,
-    marginBottom: hp(10),
+    color: '#881337',
+    marginBottom: hp(6),
+  },
+  statusMessage: {
+    fontSize: fs(14),
+    color: '#E11D48',
+    fontWeight: '500',
+    marginBottom: hp(25),
+    textAlign: 'center',
+    paddingHorizontal: wp(20),
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(14),
+    paddingVertical: hp(8),
+    borderRadius: ms(20),
+  },
+  statusBadgeText: {
+    fontSize: fs(11),
+    fontWeight: '700',
+    marginLeft: wp(8),
   },
   statsRow: {
     flexDirection: 'row',
-    gap: wp(10),
+    justifyContent: 'space-between',
+    marginBottom: hp(30),
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: hp(20),
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statIconCircle: {
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(10),
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: hp(10),
   },
-  statCardHalf: {
-    flex: 1,
-    backgroundColor: AppColors.backgroundWhite,
-    borderRadius: ms(12),
-    padding: wp(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    borderWidth: 1,
-    borderColor: AppColors.border,
-  },
-  statIconBadge: {
-    width: wp(32),
-    height: wp(32),
-    borderRadius: wp(16),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: wp(12),
-  },
-  statTexts: {
-    flex: 1,
-  },
   statValue: {
-    fontSize: fs(20),
+    fontSize: fs(17),
     fontWeight: '800',
-    color: AppColors.textDark,
+    color: '#1E293B',
   },
   statLabel: {
-    fontSize: fs(11),
-    fontWeight: '600',
-    color: AppColors.placeholder,
+    fontSize: fs(9),
+    fontWeight: '700',
+    color: '#94A3B8',
+    marginTop: 2,
+    letterSpacing: 0.5,
   },
-  statCardFull: {
-    backgroundColor: AppColors.backgroundWhite,
-    borderRadius: ms(12),
-    padding: wp(12),
+  feedbackCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: ms(20),
+    padding: ms(20),
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    borderWidth: 1,
-    borderColor: AppColors.border,
+    marginBottom: hp(20),
+    paddingBottom: hp(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
   },
-  fullStatLabel: {
-    fontSize: fs(14),
+  cardTitle: {
+    fontSize: fs(16),
     fontWeight: '700',
-    color: AppColors.textDark,
+    color: '#1E293B',
     marginLeft: wp(12),
   },
-  fullStatValue: {
-    fontSize: fs(18),
-    fontWeight: '800',
-    color: AppColors.textDark,
+  feedbackForm: {
+    marginTop: hp(5),
   },
-  certButton: {
-    height: hp(48),
-    backgroundColor: AppColors.teal,
-    borderRadius: ms(12),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: hp(15),
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+  feedbackLabel: {
+    fontSize: fs(14),
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: hp(15),
   },
-  certButtonText: {
-    color: '#fff',
-    fontSize: fs(16),
-    fontWeight: '800',
-  },
-  actionRow: {
+  starsRow: {
     flexDirection: 'row',
+    gap: wp(12),
+    marginBottom: hp(25),
+    justifyContent: 'center',
+  },
+  commentInput: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: ms(15),
+    padding: ms(15),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    minHeight: hp(100),
+    color: '#1E293B',
+    fontSize: fs(14),
+    marginBottom: hp(25),
+  },
+  submitFeedbackBtn: {
+    backgroundColor: '#1E3A8A',
+    flexDirection: 'row',
+    height: hp(55),
+    borderRadius: ms(15),
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: wp(10),
-    marginTop: hp(10),
   },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    height: hp(45),
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#F0F0F0',
-    borderRadius: ms(12),
+  submitFeedbackText: {
+    color: '#FFFFFF',
+    fontSize: fs(16),
+    fontWeight: '700',
+  },
+  thanksContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    paddingVertical: hp(25),
   },
-  actionBtnText: {
+  thanksIconCircle: {
+    width: ms(70),
+    height: ms(70),
+    borderRadius: ms(35),
+    backgroundColor: '#FEF2F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: hp(15),
+  },
+  thanksTitle: {
+    fontSize: fs(20),
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: hp(8),
+  },
+  thanksMessage: {
+    fontSize: fs(15),
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: fs(22),
+  },
+  bottomActions: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    paddingHorizontal: wp(20),
+    paddingTop: hp(20),
+    gap: wp(15),
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+  },
+  homeBtn: {
+    flex: 1,
+    height: hp(52),
+    borderRadius: ms(14),
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  homeBtnText: {
     fontSize: fs(15),
     fontWeight: '700',
-    color: '#333',
-    marginLeft: wp(8),
+    color: '#475569',
   },
-  fixedFooter: {
-    paddingVertical: hp(15),
+  retryBtn: {
+    flex: 1,
+    height: hp(52),
+    borderRadius: ms(14),
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    backgroundColor: '#fff',
   },
-  footerText: {
-    fontSize: fs(11),
-    color: '#999',
-    fontWeight: '500',
+  retryBtnText: {
+    fontSize: fs(15),
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

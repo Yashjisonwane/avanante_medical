@@ -34,17 +34,26 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
   };
 
   const handleQuizPress = () => {
+    const quizId = topicData.assessment_id || topicData.quiz_id || (typeof topicData.quiz === 'object' ? topicData.quiz.id : null) || assessmentId || topicData.id;
     router.push({
       pathname: '/(tabs)/levels/exam',
-      params: { id: assessmentId || topicData.assessment_id || topicData.id }
+      params: { id: quizId }
     });
   };
 
-  // Show Give Quiz button when all topic content is read AND a quiz is available
+  // Show Give Quiz button when all topic content is read OR topic is completed
   const isContentCompleted = topicData.is_content_completed == true || topicData.is_content_completed == 'true' || topicData.is_content_completed == 1;
-  const isQuizAvailable = topicData.is_quiz_available == true || topicData.is_quiz_available == 'true' || topicData.is_quiz_available == 1;
+  const isTopicCompleted = topicData.is_completed == true || topicData.is_completed == 'true' || topicData.is_completed == 1;
   
-  const showQuizBtn = isContentCompleted && isQuizAvailable;
+  // If content is completed, we show the quiz button (the handler will fallback to topic ID if no specific quiz ID exists)
+  const showQuizBtn = (isContentCompleted || isTopicCompleted);
+
+  const handleFAQPress = () => {
+    router.push({
+      pathname: '/(tabs)/levels/faq',
+      params: { topicId: topicData.id }
+    });
+  };
 
   return (
     <TouchableOpacity 
@@ -55,51 +64,64 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
       onPress={handlePress}
       activeOpacity={isUnlocked ? 0.9 : 1}
     >
-      <View style={styles.topicIconContainer}>
-        {isUnlocked ? (
-          <Ionicons name="play" size={ms(24)} color="#1E3A8A" />
-        ) : (
-          <Ionicons name="lock-closed" size={ms(20)} color="#94A3B8" />
-        )}
-      </View>
-      <View style={styles.topicDetails}>
-        <View style={styles.topicHeaderRow}>
-          <Text style={styles.topicMeta}>Topic {topicData.id}</Text>
-          {isCurrent && !isCompleted ? (
-            <View style={styles.badgeCurrent}>
-              <Text style={styles.badgeCurrentText}>Current</Text>
-            </View>
-          ) : !isUnlocked ? (
-            <View style={styles.badgeLocked}>
-              <Ionicons name="lock-closed" size={ms(10)} color="#475569" />
-              <Text style={styles.badgeLockedText}>Locked</Text>
-            </View>
-          ) : null}
-          <View style={styles.badgeDuration}>
-            <Ionicons name="time-outline" size={ms(10)} color="#64748B" />
-            <Text style={styles.badgeDurationText}>{topicData.estimated_duration || 0} min</Text>
-          </View>
+      <View style={styles.topicMainContent}>
+        <View style={styles.topicIconContainer}>
+          {isUnlocked ? (
+            <Ionicons name="play" size={ms(22)} color="#1E3A8A" />
+          ) : (
+            <Ionicons name="lock-closed" size={ms(18)} color="#94A3B8" />
+          )}
         </View>
-        <Text style={styles.topicTitle} numberOfLines={1}>{topicData.title}</Text>
+        <View style={styles.topicDetails}>
+          <View style={styles.topicHeaderRow}>
+            <Text style={styles.topicMeta}>{t('levels.topic', 'Topic')} {topicData.id}</Text>
+            {isCurrent && !isCompleted ? (
+              <View style={styles.badgeCurrent}>
+                <Text style={styles.badgeCurrentText}>{t('common.current', 'Current')}</Text>
+              </View>
+            ) : !isUnlocked ? (
+              <View style={styles.badgeLocked}>
+                <Ionicons name="lock-closed" size={ms(10)} color="#475569" />
+                <Text style={styles.badgeLockedText}>{t('common.locked', 'Locked')}</Text>
+              </View>
+            ) : null}
+            <View style={styles.badgeDuration}>
+              <Ionicons name="time-outline" size={ms(10)} color="#64748B" />
+              <Text style={styles.badgeDurationText}>{topicData.estimated_duration || 0} {t('common.min', 'min')}</Text>
+            </View>
+          </View>
+          <Text style={styles.topicTitle} numberOfLines={2}>{topicData.title}</Text>
+        </View>
       </View>
       
-      <View style={styles.actionButtonsRow}>
-        {showQuizBtn ? (
-          <TouchableOpacity style={styles.actionButtonQuiz} onPress={handleQuizPress}>
-            <Ionicons name="help-circle" size={ms(12)} color="#fff" style={{ marginRight: wp(4) }} />
-            <Text style={styles.actionButtonQuizText}>Give Quiz</Text>
+      {isUnlocked && (
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity style={styles.actionButtonFAQ} onPress={handleFAQPress}>
+            <Ionicons name="help-circle-outline" size={ms(12)} color="#F97316" style={{ marginRight: wp(4) }} />
+            <Text style={styles.actionButtonFAQText}>{t('levels.faq', 'FAQ')}</Text>
           </TouchableOpacity>
-        ) : null}
-        {isUnlocked ? (
+          
+          {showQuizBtn && (
+            <TouchableOpacity style={styles.actionButtonQuiz} onPress={handleQuizPress}>
+              <Ionicons name="help-circle" size={ms(12)} color="#fff" style={{ marginRight: wp(4) }} />
+              <Text style={styles.actionButtonQuizText}>{t('levels.give_quiz', 'Give Quiz')}</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={styles.actionButtonStart} onPress={handlePress}>
-            <Text style={styles.actionButtonStartText}>Start Topic</Text>
+            <Text style={styles.actionButtonStartText}>{t('levels.start_topic', 'Start Topic')}</Text>
           </TouchableOpacity>
-        ) : (
+        </View>
+      )}
+
+      {!isUnlocked && (
+        <View style={styles.actionButtonsRow}>
           <View style={styles.actionButtonLocked}>
-            <Text style={styles.actionButtonLockedText}>Locked</Text>
+            <Ionicons name="lock-closed" size={ms(12)} color="#64748B" style={{ marginRight: wp(4) }} />
+            <Text style={styles.actionButtonLockedText}>{t('common.locked', 'Locked')}</Text>
           </View>
-        )}
-      </View>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -163,7 +185,7 @@ export default function ChapterDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + hp(20), paddingBottom: nextTopicToPlay ? hp(120) + insets.bottom : hp(40) + insets.bottom }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + hp(20), paddingBottom: nextTopicToPlay ? hp(120) : hp(40) }]} showsVerticalScrollIndicator={false}>
         
         {/* Header Section */}
         <View style={styles.headerRow}>
@@ -174,8 +196,8 @@ export default function ChapterDetailsScreen() {
             <Ionicons name="arrow-back" size={ms(22)} color="#1E293B" />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.screenTitle}>Chapter Details</Text>
-            <Text style={styles.screenSubtitle}>Track your progress through topics</Text>
+            <Text style={styles.screenTitle}>{t('levels.chapter_details', 'Chapter Details')}</Text>
+            <Text style={styles.screenSubtitle}>{t('levels.track_progress', 'Track your progress through topics')}</Text>
           </View>
         </View>
 
@@ -190,11 +212,11 @@ export default function ChapterDetailsScreen() {
             <View style={styles.bannerOverlay}>
               <View style={styles.badgesRow}>
                 <View style={styles.badgePrimary}>
-                  <Text style={styles.badgePrimaryText}>Chapter {id} • {totalTopicsCount} Topics • {totalDuration} min</Text>
+                  <Text style={styles.badgePrimaryText}>{t('levels.chapter', 'Chapter')} {id} • {totalTopicsCount} {t('levels.topics', 'Topics')} • {totalDuration} {t('common.min', 'min')}</Text>
                 </View>
                 <View style={styles.badgeSecondary}>
                   <Ionicons name="time-outline" size={ms(12)} color="#fff" />
-                  <Text style={styles.badgeSecondaryText}>Self-paced</Text>
+                  <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
                 </View>
               </View>
               <Text style={styles.bannerTitle}>{chapterTitle}</Text>
@@ -208,7 +230,7 @@ export default function ChapterDetailsScreen() {
           <View style={[styles.statCard, { borderLeftColor: '#2563EB' }]}>
             <View style={styles.statCardHeader}>
               <View>
-                <Text style={[styles.statCardTitle, { color: '#2563EB' }]}>CHAPTER PROGRESS</Text>
+                <Text style={[styles.statCardTitle, { color: '#2563EB' }]}>{t('levels.chapter_progress', 'CHAPTER PROGRESS')}</Text>
                 <Text style={styles.statCardValue}>{progressPercent}%</Text>
               </View>
               <View style={[styles.statIconBadge, { backgroundColor: '#EFF6FF' }]}>
@@ -219,13 +241,13 @@ export default function ChapterDetailsScreen() {
               <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: '#2563EB' }]} />
               </View>
-              <Text style={styles.progressSubtext}>{completedTopics} of {totalTopicsCount} topics completed</Text>
+              <Text style={styles.progressSubtext}>{completedTopics} {t('levels.of', 'of')} {totalTopicsCount} {t('levels.topics_completed', 'topics completed')}</Text>
             </View>
           </View>
           
           <View style={styles.statsRow}>
             <View style={[styles.statCardHalf, { borderLeftColor: '#9333EA' }]}>
-              <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>COMPLETED</Text>
+              <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>{t('levels.completed', 'COMPLETED')}</Text>
               <View style={styles.statValueRow}>
                 <Text style={styles.statCardValueSmall}>{completedTopics}/{totalTopicsCount}</Text>
                 <Ionicons name="ribbon-outline" size={ms(18)} color="#9333EA" />
@@ -233,9 +255,9 @@ export default function ChapterDetailsScreen() {
             </View>
 
             <View style={[styles.statCardHalf, { borderLeftColor: '#16A34A' }]}>
-              <Text style={[styles.statCardTitle, { color: '#16A34A' }]}>EST. TIME</Text>
+              <Text style={[styles.statCardTitle, { color: '#16A34A' }]}>{t('levels.est_time', 'EST. TIME')}</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statCardValueSmall}>{totalDuration} min</Text>
+                <Text style={styles.statCardValueSmall}>{totalDuration} {t('common.min', 'min')}</Text>
                 <Ionicons name="time-outline" size={ms(18)} color="#16A34A" />
               </View>
             </View>
@@ -248,7 +270,7 @@ export default function ChapterDetailsScreen() {
             <Ionicons name="book-outline" size={ms(20)} color="#2563EB" />
           </View>
           <View style={styles.aboutContent}>
-            <Text style={styles.aboutTitle}>About this Chapter</Text>
+            <Text style={styles.aboutTitle}>{t('levels.about_chapter', 'About this Chapter')}</Text>
             <Text style={styles.aboutText}>{chapterDesc}</Text>
           </View>
         </View>
@@ -257,9 +279,9 @@ export default function ChapterDetailsScreen() {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderLeft}>
             <Ionicons name="list-outline" size={ms(18)} color="#3B82F6" style={{ marginRight: wp(8) }} />
-            <Text style={styles.sectionTitle}>All Topics</Text>
+            <Text style={styles.sectionTitle}>{t('levels.all_topics', 'All Topics')}</Text>
           </View>
-          <Text style={styles.sectionSubtitle}>{completedTopics} of {totalTopicsCount} completed</Text>
+          <Text style={styles.sectionSubtitle}>{completedTopics} {t('levels.of', 'of')} {totalTopicsCount} {t('levels.completed_label', 'completed')}</Text>
         </View>
 
         {/* Topics List */}
@@ -278,10 +300,10 @@ export default function ChapterDetailsScreen() {
 
       {/* Sticky Bottom Footer */}
       {completedTopics === totalTopicsCount && totalTopicsCount > 0 ? (
-        <View style={[styles.stickyFooter, { paddingBottom: insets.bottom > 0 ? insets.bottom + hp(15) : hp(15) }]}>
+        <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
           <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>Congratulations!</Text>
-            <Text style={styles.footerSubtitle}>Chapter Completed</Text>
+            <Text style={styles.footerTitle}>{t('levels.congratulations', 'Congratulations!')}</Text>
+            <Text style={styles.footerSubtitle}>{t('levels.chapter_completed', 'Chapter Completed')}</Text>
           </View>
           {assessmentId ? (
             <TouchableOpacity 
@@ -293,7 +315,7 @@ export default function ChapterDetailsScreen() {
                 });
               }}
             >
-              <Text style={styles.continueBtnText}>Give Chapter Quiz</Text>
+              <Text style={styles.continueBtnText}>{t('levels.give_chapter_quiz', 'Give Chapter Quiz')}</Text>
               <Ionicons name="help-circle" size={ms(16)} color="#fff" />
             </TouchableOpacity>
           ) : (
@@ -301,16 +323,16 @@ export default function ChapterDetailsScreen() {
               style={styles.continueBtn}
               onPress={() => router.back()}
             >
-              <Text style={styles.continueBtnText}>Go Back</Text>
+              <Text style={styles.continueBtnText}>{t('common.go_back', 'Go Back')}</Text>
               <Ionicons name="arrow-back" size={ms(16)} color="#fff" />
             </TouchableOpacity>
           )}
         </View>
       ) : nextTopicToPlay && (
-        <View style={[styles.stickyFooter, { paddingBottom: insets.bottom > 0 ? insets.bottom + hp(15) : hp(15) }]}>
+        <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
           <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>Continue your learning journey</Text>
-            <Text style={styles.footerSubtitle}>Next: {nextTopicToPlay.title}</Text>
+            <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
+            <Text style={styles.footerSubtitle}>{t('common.next', 'Next')}: {nextTopicToPlay.title}</Text>
           </View>
           <TouchableOpacity 
             style={styles.continueBtn}
@@ -321,7 +343,7 @@ export default function ChapterDetailsScreen() {
               });
             }}
           >
-            <Text style={styles.continueBtnText}>Continue Learning</Text>
+            <Text style={styles.continueBtnText}>{t('levels.continue_learning', 'Continue Learning')}</Text>
             <Ionicons name="chevron-forward" size={ms(16)} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -584,27 +606,35 @@ const styles = StyleSheet.create({
     marginBottom: hp(20),
   },
   topicCard: {
-    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: ms(12),
+    borderRadius: ms(16),
     padding: ms(16),
-    marginBottom: hp(12),
-    alignItems: 'center',
+    marginBottom: hp(16),
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   topicCardCurrent: {
     borderColor: '#93C5FD',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F8FAFC',
+  },
+  topicMainContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: hp(16),
   },
   topicIconContainer: {
-    width: ms(48),
-    height: ms(48),
+    width: ms(44),
+    height: ms(44),
     borderRadius: ms(12),
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: wp(16),
+    marginRight: wp(12),
   },
   topicDetails: {
     flex: 1,
@@ -676,16 +706,36 @@ const styles = StyleSheet.create({
   actionButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: wp(8),
+    paddingTop: hp(12),
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
   actionButtonStart: {
     backgroundColor: '#3B82F6',
     paddingHorizontal: wp(12),
     paddingVertical: hp(8),
     borderRadius: ms(8),
-    marginLeft: wp(6),
   },
   actionButtonStartText: {
     color: '#FFFFFF',
+    fontSize: fs(11),
+    fontWeight: '700',
+  },
+  actionButtonFAQ: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(8),
+    borderRadius: ms(8),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    marginLeft: wp(6),
+  },
+  actionButtonFAQText: {
+    color: '#F97316',
     fontSize: fs(11),
     fontWeight: '700',
   },
@@ -704,11 +754,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   actionButtonLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#F1F5F9',
     paddingHorizontal: wp(12),
     paddingVertical: hp(8),
     borderRadius: ms(8),
-    marginLeft: wp(8),
   },
   actionButtonLockedText: {
     color: '#64748B',

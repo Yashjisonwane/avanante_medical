@@ -15,7 +15,7 @@ import { useRouter, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
-import { AppColors } from '../../../constants/Theme';
+import { AppColors, Spacing } from '../../../constants/Theme';
 import { fetchLevelProgress, getHierarchyThunk } from '../../../redux/slices/courseSlice';
 
 const LevelCard = ({ 
@@ -224,15 +224,15 @@ export default function LevelsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppColors.backgroundLight },
   header: { backgroundColor: AppColors.primaryDark, paddingBottom: hp(15) },
-  headerContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(20), justifyContent: 'space-between' },
+  headerContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.SCREEN_PADDING, justifyContent: 'space-between' },
   headerIcon: { width: wp(40), height: wp(40), borderRadius: wp(20), backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: fs(20), fontWeight: '700', color: AppColors.textWhite },
-  tabContainer: { flexDirection: 'row', backgroundColor: AppColors.backgroundWhite, paddingHorizontal: wp(20), paddingVertical: hp(15), gap: wp(15) },
+  tabContainer: { flexDirection: 'row', backgroundColor: AppColors.backgroundWhite, paddingHorizontal: Spacing.SCREEN_PADDING, paddingVertical: hp(15), gap: wp(15) },
   tab: { paddingHorizontal: wp(20), paddingVertical: hp(10), borderRadius: ms(20), backgroundColor: AppColors.backgroundLight },
   tabActive: { backgroundColor: AppColors.primaryDark },
   tabLabel: { fontSize: fs(14), fontWeight: '600', color: AppColors.textSecondary },
   tabLabelActive: { color: AppColors.textWhite },
-  scrollContent: { padding: wp(20) },
+  scrollContent: { padding: Spacing.SCREEN_PADDING },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   card: { backgroundColor: AppColors.backgroundWhite, borderRadius: ms(20), marginBottom: hp(20), overflow: 'hidden', elevation: 4, shadowColor: AppColors.cardShadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
   imageContainer: { height: hp(180), width: '100%' },

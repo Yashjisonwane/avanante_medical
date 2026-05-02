@@ -63,30 +63,30 @@ const ModuleItem = ({ moduleData, isCurrent }) => {
       </View>
       <View style={styles.moduleDetails}>
         <View style={styles.moduleHeaderRow}>
-          <Text style={styles.moduleMeta}>Module {moduleData.id}</Text>
+          <Text style={styles.moduleMeta}>{t('modules.module_number', { number: moduleData.id })}</Text>
           {isCurrent && !isCompleted ? (
             <View style={styles.badgeCurrent}>
-              <Text style={styles.badgeCurrentText}>Current</Text>
+              <Text style={styles.badgeCurrentText}>{t('common.current', 'Current')}</Text>
             </View>
           ) : !isUnlocked ? (
             <View style={styles.badgeLocked}>
               <Ionicons name="lock-closed" size={ms(10)} color="#475569" />
-              <Text style={styles.badgeLockedText}>Locked</Text>
+              <Text style={styles.badgeLockedText}>{t('common.locked', 'Locked')}</Text>
             </View>
           ) : null}
         </View>
         <Text style={styles.moduleTitle} numberOfLines={1}>{moduleData.title}</Text>
         <Text style={styles.moduleDesc} numberOfLines={1}>{moduleData.description || `${moduleData.title} description`}</Text>
-        <Text style={styles.moduleCounts}>{chaptersCount} chapters • {topicsCount} topics</Text>
+        <Text style={styles.moduleCounts}>{chaptersCount} {t('levels.chapters', 'chapters')} • {topicsCount} {t('levels.topics', 'topics')}</Text>
       </View>
       
       {isUnlocked ? (
         <TouchableOpacity style={styles.actionButtonStart} onPress={handlePress}>
-          <Text style={styles.actionButtonStartText}>Start</Text>
+          <Text style={styles.actionButtonStartText}>{t('common.start', 'Start')}</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.actionButtonLocked}>
-          <Text style={styles.actionButtonLockedText}>Locked</Text>
+          <Text style={styles.actionButtonLockedText}>{t('common.locked', 'Locked')}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -171,8 +171,8 @@ export default function LevelDetailsScreen() {
             <Ionicons name="arrow-back" size={ms(22)} color="#1E293B" />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.screenTitle}>Level Details</Text>
-            <Text style={styles.screenSubtitle}>Track your progress and journey</Text>
+            <Text style={styles.screenTitle}>{t('levels.details_title', 'Level Details')}</Text>
+            <Text style={styles.screenSubtitle}>{t('levels.track_progress', 'Track your progress and journey')}</Text>
           </View>
         </View>
 
@@ -187,11 +187,11 @@ export default function LevelDetailsScreen() {
             <View style={styles.bannerOverlay}>
               <View style={styles.badgesRow}>
                 <View style={styles.badgePrimary}>
-                  <Text style={styles.badgePrimaryText}>Level {id} • {totalModules} Modules</Text>
+                  <Text style={styles.badgePrimaryText}>{t('levels.level_n', { number: id })} • {totalModules} {t('levels.all_modules', 'Modules')}</Text>
                 </View>
                 <View style={styles.badgeSecondary}>
                   <Ionicons name="time-outline" size={ms(12)} color="#fff" />
-                  <Text style={styles.badgeSecondaryText}>Self-paced</Text>
+                  <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
                 </View>
               </View>
               <Text style={styles.bannerTitle}>{levelTitle}</Text>
@@ -205,7 +205,7 @@ export default function LevelDetailsScreen() {
           <View style={[styles.statCard, { borderLeftColor: '#2563EB' }]}>
             <View style={styles.statCardHeader}>
               <View>
-                <Text style={[styles.statCardTitle, { color: '#2563EB' }]}>OVERALL PROGRESS</Text>
+                <Text style={[styles.statCardTitle, { color: '#2563EB' }]}>{t('levels.overall_completion', 'OVERALL PROGRESS')}</Text>
                 <Text style={styles.statCardValue}>{progressPercent}%</Text>
               </View>
               <View style={[styles.statIconBadge, { backgroundColor: '#EFF6FF' }]}>
@@ -216,13 +216,13 @@ export default function LevelDetailsScreen() {
               <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: '#2563EB' }]} />
               </View>
-              <Text style={styles.progressSubtext}>{completedModules} of {totalModules} modules completed</Text>
+              <Text style={styles.progressSubtext}>{t('levels.module_complete', { completed: completedModules, total: totalModules })}</Text>
             </View>
           </View>
           
           <View style={styles.statsRow}>
             <View style={[styles.statCardHalf, { borderLeftColor: '#9333EA' }]}>
-              <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>COMPLETED</Text>
+              <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>{t('common.completed', 'COMPLETED')}</Text>
               <View style={styles.statValueRow}>
                 <Text style={styles.statCardValueSmall}>{completedModules}/{totalModules}</Text>
                 <Ionicons name="ribbon-outline" size={ms(18)} color="#9333EA" />
@@ -230,9 +230,9 @@ export default function LevelDetailsScreen() {
             </View>
 
             <View style={[styles.statCardHalf, { borderLeftColor: '#16A34A' }]}>
-              <Text style={[styles.statCardTitle, { color: '#16A34A' }]}>EST. TIME</Text>
+              <Text style={[styles.statCardTitle, { color: '#16A34A' }]}>{t('levels.est_time', 'EST. TIME')}</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statCardValueSmall}>{totalDuration} min</Text>
+                <Text style={styles.statCardValueSmall}>{totalDuration} {t('common.min', 'min')}</Text>
                 <Ionicons name="time-outline" size={ms(18)} color="#16A34A" />
               </View>
             </View>
@@ -245,7 +245,7 @@ export default function LevelDetailsScreen() {
             <Ionicons name="book-outline" size={ms(20)} color="#2563EB" />
           </View>
           <View style={styles.aboutContent}>
-            <Text style={styles.aboutTitle}>About this Level</Text>
+            <Text style={styles.aboutTitle}>{t('levels.about_level', 'About this Level')}</Text>
             <Text style={styles.aboutText}>{levelDesc}</Text>
           </View>
         </View>
@@ -254,9 +254,9 @@ export default function LevelDetailsScreen() {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderLeft}>
             <View style={styles.sectionDot} />
-            <Text style={styles.sectionTitle}>Learning Modules</Text>
+            <Text style={styles.sectionTitle}>{t('levels.all_modules', 'Learning Modules')}</Text>
           </View>
-          <Text style={styles.sectionSubtitle}>{completedModules} of {totalModules} completed</Text>
+          <Text style={styles.sectionSubtitle}>{t('levels.module_complete', { completed: completedModules, total: totalModules })}</Text>
         </View>
 
         {/* Modules List */}
@@ -275,8 +275,8 @@ export default function LevelDetailsScreen() {
       {nextModuleToPlay && (
         <View style={[styles.stickyFooter, { paddingBottom: insets.bottom > 0 ? insets.bottom + hp(15) : hp(15) }]}>
           <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>Continue your learning journey</Text>
-            <Text style={styles.footerSubtitle}>Next: {nextModuleToPlay.title}</Text>
+            <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
+            <Text style={styles.footerSubtitle}>{t('common.next', 'Next')}: {nextModuleToPlay.title}</Text>
           </View>
           <TouchableOpacity 
             style={styles.continueBtn}
@@ -287,7 +287,7 @@ export default function LevelDetailsScreen() {
               });
             }}
           >
-            <Text style={styles.continueBtnText}>Continue Learning</Text>
+            <Text style={styles.continueBtnText}>{t('levels.continue_learning', 'Continue Learning')}</Text>
             <Ionicons name="chevron-forward" size={ms(16)} color="#fff" />
           </TouchableOpacity>
         </View>

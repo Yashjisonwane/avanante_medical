@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import i18n from '../../../i18n';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
-import { AppColors } from '../../../constants/Theme';
+import { AppColors, Spacing } from '../../../constants/Theme';
 import { getHierarchyThunk } from '../../../redux/slices/courseSlice';
 
 const LANGUAGES = [
@@ -61,6 +61,10 @@ export default function HomeScreen() {
     i18n.changeLanguage(langCode);
     setCurrentLang(langCode);
     setShowLanguageModal(false);
+    
+    // Re-fetch hierarchy in the new language
+    dispatch(getHierarchyThunk());
+    
     const langName = LANGUAGES.find(l => l.code === langCode)?.label || langCode;
     showToastMessage(`Language changed to ${langName}`);
   };
@@ -127,7 +131,7 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: wp(20), paddingBottom: hp(100) }}
+        contentContainerStyle={{ paddingHorizontal: Spacing.SCREEN_PADDING, paddingBottom: hp(100) }}
       >
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
@@ -296,7 +300,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppColors.backgroundLight },
   header: { backgroundColor: AppColors.primaryDark, paddingBottom: hp(15) },
-  headerContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(20), justifyContent: 'space-between' },
+  headerContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.SCREEN_PADDING, justifyContent: 'space-between' },
   headerBackBtn: { width: ms(40), height: ms(40), alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: fs(20), fontWeight: '800', color: '#fff' },
   headerRight: { flexDirection: 'row', alignItems: 'center' },

@@ -108,12 +108,14 @@ export const changePassword = createAsyncThunk('auth/changePassword', async (pay
   }),
 );
 
-export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
+export const logoutUser = createAsyncThunk('auth/logoutUser', async (_, { dispatch }) => {
   try {
     await apiRequest({
       endpoint: '/trainee/logout',
       method: 'POST',
     });
+  } catch (error) {
+    console.warn('Logout API failed, clearing local state anyway:', error.message);
   } finally {
     await clearAccessToken();
   }
@@ -144,6 +146,13 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     clearAuthMessages: (state) => {
+      state.successMessage = '';
+      state.errorMessage = '';
+    },
+    forceLogout: (state) => {
+      state.token = null;
+      state.user = null;
+      state.isAuthenticated = false;
       state.successMessage = '';
       state.errorMessage = '';
     },
@@ -231,7 +240,11 @@ const authSlice = createSlice({
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.actionLoading.logout = false;
-        state.errorMessage = action.error.message || 'Logout failed.';
+        // Even if API failed, we consider it a successful local logout
+        state.token = null;
+        state.user = null;
+        state.isAuthenticated = false;
+        state.errorMessage = '';
       })
       // Profile
       .addCase(fetchProfile.pending, (state) => {
@@ -271,9 +284,20 @@ const authSlice = createSlice({
       .addCase(changePassword.rejected, (state, action) => {
         state.actionLoading.changePassword = false;
         state.errorMessage = action.error.message || 'Unable to change password.';
-      });
+      })
+      .addMatcher(
+        (action) => 
+          action.type.endsWith('/rejected') && 
+          (action.error?.message?.toLowerCase().includes('unauthorized') || 
+           action.error?.message?.toLowerCase().includes('unauthenticated')),
+        (state) => {
+          state.token = null;
+          state.user = null;
+          state.isAuthenticated = false;
+        }
+      );
   },
 });
 
-export const { clearAuthMessages } = authSlice.actions;
+export const { clearAuthMessages, forceLogout } = authSlice.actions;
 export default authSlice.reducer;

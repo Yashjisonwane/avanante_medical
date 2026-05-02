@@ -65,30 +65,30 @@ const ChapterItem = ({ chapterData, isCurrent }) => {
       </View>
       <View style={styles.chapterDetails}>
         <View style={styles.chapterHeaderRow}>
-          <Text style={styles.chapterMeta}>Chapter {chapterData.id}</Text>
+          <Text style={styles.chapterMeta}>{t('levels.chapter', 'Chapter')} {chapterData.id}</Text>
           {isCurrent && !isCompleted ? (
             <View style={styles.badgeCurrent}>
-              <Text style={styles.badgeCurrentText}>Current</Text>
+              <Text style={styles.badgeCurrentText}>{t('common.current', 'Current')}</Text>
             </View>
           ) : !isUnlocked ? (
             <View style={styles.badgeLocked}>
               <Ionicons name="lock-closed" size={ms(10)} color="#475569" />
-              <Text style={styles.badgeLockedText}>Locked</Text>
+              <Text style={styles.badgeLockedText}>{t('common.locked', 'Locked')}</Text>
             </View>
           ) : null}
         </View>
         <Text style={styles.chapterTitle} numberOfLines={1}>{chapterData.title}</Text>
         <Text style={styles.chapterDesc} numberOfLines={1}>{chapterData.description || `${chapterData.title} description`}</Text>
-        <Text style={styles.chapterCounts}>{topicsCount} topics • {completedTopics} completed • {chapterDuration} min</Text>
+        <Text style={styles.chapterCounts}>{topicsCount} {t('levels.topics', 'topics')} • {completedTopics} {t('levels.completed_label', 'completed')} • {chapterDuration} {t('common.min', 'min')}</Text>
       </View>
       
       {isUnlocked ? (
         <TouchableOpacity style={styles.actionButtonStart} onPress={handlePress}>
-          <Text style={styles.actionButtonStartText}>Start</Text>
+          <Text style={styles.actionButtonStartText}>{t('common.start', 'Start')}</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.actionButtonLocked}>
-          <Text style={styles.actionButtonLockedText}>Locked</Text>
+          <Text style={styles.actionButtonLockedText}>{t('common.locked', 'Locked')}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -162,7 +162,7 @@ export default function ModuleDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + hp(20), paddingBottom: nextChapterToPlay ? hp(120) + insets.bottom : hp(40) + insets.bottom }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + hp(20), paddingBottom: nextChapterToPlay ? hp(120) : hp(40) }]} showsVerticalScrollIndicator={false}>
         
         {/* Header Section */}
         <View style={styles.headerRow}>
@@ -173,8 +173,8 @@ export default function ModuleDetailsScreen() {
             <Ionicons name="arrow-back" size={ms(22)} color="#1E293B" />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.screenTitle}>Module Details</Text>
-            <Text style={styles.screenSubtitle}>Track your progress through chapters</Text>
+            <Text style={styles.screenTitle}>{t('modules.details_title', 'Module Details')}</Text>
+            <Text style={styles.screenSubtitle}>{t('modules.track_progress', 'Track your progress through chapters')}</Text>
           </View>
         </View>
 
@@ -189,11 +189,11 @@ export default function ModuleDetailsScreen() {
             <View style={styles.bannerOverlay}>
               <View style={styles.badgesRow}>
                 <View style={styles.badgePrimary}>
-                  <Text style={styles.badgePrimaryText}>Module {id} • {totalChaptersCount} Chapters • {totalTopicsCount} Topics</Text>
+                  <Text style={styles.badgePrimaryText}>{t('modules.module_number', { number: id })} • {totalChaptersCount} {t('levels.chapters', 'Chapters')} • {totalTopicsCount} {t('levels.topics', 'Topics')}</Text>
                 </View>
                 <View style={styles.badgeSecondary}>
                   <Ionicons name="time-outline" size={ms(12)} color="#fff" />
-                  <Text style={styles.badgeSecondaryText}>Self-paced</Text>
+                  <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
                 </View>
               </View>
               <Text style={styles.bannerTitle}>{moduleTitle}</Text>
@@ -207,7 +207,7 @@ export default function ModuleDetailsScreen() {
           <View style={[styles.statCard, { borderLeftColor: '#2563EB' }]}>
             <View style={styles.statCardHeader}>
               <View>
-                <Text style={[styles.statCardTitle, { color: '#2563EB' }]}>MODULE PROGRESS</Text>
+                <Text style={[styles.statCardTitle, { color: '#2563EB' }]}>{t('levels.chapter_progress', 'MODULE PROGRESS')}</Text>
                 <Text style={styles.statCardValue}>{progressPercent}%</Text>
               </View>
               <View style={[styles.statIconBadge, { backgroundColor: '#EFF6FF' }]}>
@@ -218,13 +218,13 @@ export default function ModuleDetailsScreen() {
               <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: '#2563EB' }]} />
               </View>
-              <Text style={styles.progressSubtext}>{completedChapters} of {totalChaptersCount} chapters completed</Text>
+              <Text style={styles.progressSubtext}>{t('modules.chapter_complete', { completed: completedChapters, total: totalChaptersCount })}</Text>
             </View>
           </View>
           
           <View style={styles.statsRow}>
             <View style={[styles.statCardHalf, { borderLeftColor: '#9333EA' }]}>
-              <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>COMPLETED</Text>
+              <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>{t('common.completed', 'COMPLETED')}</Text>
               <View style={styles.statValueRow}>
                 <Text style={styles.statCardValueSmall}>{completedChapters}/{totalChaptersCount}</Text>
                 <Ionicons name="ribbon-outline" size={ms(18)} color="#9333EA" />
@@ -232,9 +232,9 @@ export default function ModuleDetailsScreen() {
             </View>
 
             <View style={[styles.statCardHalf, { borderLeftColor: '#16A34A' }]}>
-              <Text style={[styles.statCardTitle, { color: '#16A34A' }]}>EST. TIME</Text>
+              <Text style={[styles.statCardTitle, { color: '#16A34A' }]}>{t('levels.est_time', 'EST. TIME')}</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statCardValueSmall}>{totalDuration} min</Text>
+                <Text style={styles.statCardValueSmall}>{totalDuration} {t('common.min', 'min')}</Text>
                 <Ionicons name="time-outline" size={ms(18)} color="#16A34A" />
               </View>
             </View>
@@ -247,7 +247,7 @@ export default function ModuleDetailsScreen() {
             <Ionicons name="book-outline" size={ms(20)} color="#2563EB" />
           </View>
           <View style={styles.aboutContent}>
-            <Text style={styles.aboutTitle}>About this Module</Text>
+            <Text style={styles.aboutTitle}>{t('modules.about_module', 'About this Module')}</Text>
             <Text style={styles.aboutText}>{moduleDesc}</Text>
           </View>
         </View>
@@ -256,9 +256,9 @@ export default function ModuleDetailsScreen() {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderLeft}>
             <Ionicons name="document-text-outline" size={ms(18)} color="#3B82F6" style={{ marginRight: wp(8) }} />
-            <Text style={styles.sectionTitle}>All Chapters</Text>
+            <Text style={styles.sectionTitle}>{t('modules.all_chapters', 'All Chapters')}</Text>
           </View>
-          <Text style={styles.sectionSubtitle}>{completedChapters} of {totalChaptersCount} completed</Text>
+          <Text style={styles.sectionSubtitle}>{t('modules.chapter_complete', { completed: completedChapters, total: totalChaptersCount })}</Text>
         </View>
 
         {/* Chapters List */}
@@ -275,10 +275,10 @@ export default function ModuleDetailsScreen() {
 
       {/* Sticky Bottom Footer */}
       {nextChapterToPlay && (
-        <View style={[styles.stickyFooter, { paddingBottom: insets.bottom > 0 ? insets.bottom + hp(15) : hp(15) }]}>
+        <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
           <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>Continue your learning journey</Text>
-            <Text style={styles.footerSubtitle}>Next: {nextChapterToPlay.title}</Text>
+            <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
+            <Text style={styles.footerSubtitle}>{t('common.next', 'Next')}: {nextChapterToPlay.title}</Text>
           </View>
           <TouchableOpacity 
             style={styles.continueBtn}
@@ -289,7 +289,7 @@ export default function ModuleDetailsScreen() {
               });
             }}
           >
-            <Text style={styles.continueBtnText}>Continue Learning</Text>
+            <Text style={styles.continueBtnText}>{t('levels.continue_learning', 'Continue Learning')}</Text>
             <Ionicons name="chevron-forward" size={ms(16)} color="#fff" />
           </TouchableOpacity>
         </View>

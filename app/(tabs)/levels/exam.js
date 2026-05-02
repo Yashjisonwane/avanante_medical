@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   Modal,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -59,36 +60,69 @@ export default function ExamScreen() {
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageScale, setImageScale] = useState(1);
   const [timeLeft, setTimeLeft] = useState(null);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showTimeExpiredModal, setShowTimeExpiredModal] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [initError, setInitError] = useState(null);
 
   useEffect(() => {
     const initExam = async () => {
       if (assessment_id) {
+        setInitError(null);
         let attemptId = null;
         try {
           // Try to resume first
           const resumeResult = await dispatch(resumeAssessment(assessment_id)).unwrap();
           attemptId = resumeResult?.data?.attempt_id || resumeResult?.attempt_id;
-        } catch (e) { }
+        } catch (e) {
+          console.log("Resume failed:", e);
+        }
 
         if (!attemptId) {
           try {
             // If no active attempt, start new
             const startResult = await dispatch(startAssessment(assessment_id)).unwrap();
             attemptId = startResult?.data?.attempt_id || startResult?.attempt_id;
-          } catch (e) { }
+          } catch (e) {
+            console.log("Start failed:", e);
+            setInitError(e.message || "Failed to start quiz. It may not be available or max attempts reached.");
+          }
         }
 
         if (attemptId) {
-          dispatch(fetchAssessmentQuestions({ assessmentId: assessment_id, attemptId }));
+          try {
+            await dispatch(fetchAssessmentQuestions({ assessmentId: assessment_id, attemptId })).unwrap();
+          } catch (e) {
+            console.log("Fetch questions failed:", e);
+            setInitError(e.message || "Failed to load quiz questions.");
+          }
         }
+      } else {
+        setInitError("Invalid Quiz ID");
       }
     };
     initExam();
   }, [dispatch, assessment_id]);
 
   useEffect(() => {
+    // Handle hardware back button
+    const backAction = () => {
+      setShowLeaveModal(true);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, []);
+
+  useEffect(() => {
+    let interval;
     // Timer logic
-    if (assessment.details?.expires_at) {
+    if (assessment.details?.expires_at && !isSubmitted) {
       const expiresAt = new Date(assessment.details.expires_at).getTime();
 
       const updateTimer = () => {
@@ -96,19 +130,22 @@ export default function ExamScreen() {
         const diff = expiresAt - now;
         if (diff <= 0) {
           setTimeLeft("00:00");
-          // Optionally auto-submit here
+          setShowTimeExpiredModal(true);
+          clearInterval(interval);
         } else {
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const minutes = Math.floor(diff / (1000 * 60));
           const seconds = Math.floor((diff % (1000 * 60)) / 1000);
           setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
         }
       };
 
       updateTimer();
-      const interval = setInterval(updateTimer, 1000);
-      return () => clearInterval(interval);
+      interval = setInterval(updateTimer, 1000);
     }
-  }, [assessment.details?.expires_at]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [assessment.details?.expires_at, isSubmitted]);
 
   const questions = assessment.questions || [];
   const currentQuestion = questions[currentQuestionIndex];
@@ -120,40 +157,55 @@ export default function ExamScreen() {
   }, [currentQuestion]);
 
   const handleAnswer = async (optionId) => {
-    if (selectedOptionId === optionId) return; // Already selected
+    // If clicking the same option, allow deselecting (setting to null)
+    const newOptionId = selectedOptionId === optionId ? null : optionId;
 
-    // Update local state for immediate feedback
-    setSelectedOptionId(optionId);
-    dispatch(updateQuestionAnswer({ questionId: currentQuestion.id, optionId }));
+    // 1. Update local UI state immediately for instant feedback
+    setSelectedOptionId(newOptionId);
+    
+    // 2. Update Redux store so the answer persists when navigating prev/next
+    dispatch(updateQuestionAnswer({ 
+      questionId: currentQuestion.id, 
+      optionId: newOptionId 
+    }));
 
+    // 3. Sync with backend
     if (assessment.currentAttemptId) {
       try {
         await dispatch(answerAssessmentQuestion({
           attempt_id: assessment.currentAttemptId,
           question_id: currentQuestion.id,
-          selected_option_id: optionId
+          selected_option_id: newOptionId
         })).unwrap();
       } catch (e) {
-        console.error("Failed to submit answer", e);
+        console.error("Failed to sync answer with server", e);
+        // Optional: Revert local state on failure if critical
       }
     }
   };
 
   const handleSubmit = () => {
     Alert.alert(
-      t('exam.submit', 'Submit Quiz'),
-      t('exam.confirm_submit', 'Are you sure you want to submit your quiz?'),
+      t('exam.submit', 'Submit'),
+      t('exam.confirm_submit', 'Are you sure you want to submit?'),
       [
         { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
           text: t('common.confirm', 'Submit'),
           onPress: async () => {
             if (assessment.currentAttemptId) {
+              setIsSubmitted(true);
               await dispatch(submitAssessment({
                 assessmentId: assessment_id,
                 attemptId: assessment.currentAttemptId
               }));
-              router.push('/(tabs)/levels/quiz-result');
+              router.push({
+                pathname: '/(tabs)/levels/quiz-result',
+                params: { 
+                  assessment_id: assessment_id,
+                  attempt_id: assessment.currentAttemptId
+                }
+              });
             }
           }
         },
@@ -188,6 +240,23 @@ export default function ExamScreen() {
     }
   };
 
+  if (initError) {
+    return (
+      <View style={[styles.loaderContainer, { padding: wp(20) }]}>
+        <Ionicons name="alert-circle-outline" size={ms(50)} color="#E11D48" />
+        <Text style={[styles.noQuestionsText, { color: '#E11D48', marginTop: hp(10), textAlign: 'center' }]}>
+          {initError}
+        </Text>
+        <TouchableOpacity 
+          style={[styles.leaveCancelBtn, { marginTop: hp(20), width: '80%', alignSelf: 'center' }]}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.leaveCancelBtnText}>{t('common.go_back', 'Go Back')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (loading.assessmentAction && !questions.length) {
     return (
       <View style={styles.loaderContainer}>
@@ -199,7 +268,7 @@ export default function ExamScreen() {
   if (!currentQuestion) {
     return (
       <View style={styles.loaderContainer}>
-        <Text style={styles.noQuestionsText}>Preparing your quiz...</Text>
+        <Text style={styles.noQuestionsText}>{t('exam.preparing', 'Preparing your quiz...')}</Text>
         <ActivityIndicator size="small" color="#3B82F6" style={{ marginTop: hp(10) }} />
       </View>
     );
@@ -210,30 +279,171 @@ export default function ExamScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header Area */}
-      <View style={[styles.header, { paddingTop: insets.top + hp(15) }]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            style={styles.backButtonCircle}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={ms(22)} color="#1E293B" />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle} numberOfLines={1}>Quiz Assessment</Text>
-            <Text style={styles.headerSubtitle}>Test your knowledge</Text>
+      {/* Leave Quiz Confirmation Modal */}
+      <Modal visible={showLeaveModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.leaveModalContent}>
+            <TouchableOpacity 
+              style={styles.closeModalX} 
+              onPress={() => setShowLeaveModal(false)}
+            >
+              <Ionicons name="close" size={ms(20)} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <View style={styles.warningIconContainer}>
+              <View style={styles.warningIconCircle}>
+                <Ionicons name="warning-outline" size={ms(30)} color="#F97316" />
+              </View>
+            </View>
+
+            <Text style={styles.leaveModalTitle}>{t('exam.leave_quiz_q', 'Leave Quiz?')}</Text>
+            <Text style={styles.leaveModalMessage}>
+              {t('exam.leave_message', 'You have an ongoing quiz. If you leave now, your quiz will be auto-submitted.')}
+            </Text>
+            <Text style={styles.leaveModalHighlight}>{t('exam.progress_saved', 'Your progress will be saved.')}</Text>
+
+            <View style={styles.timerBadge}>
+              <Text style={styles.timerBadgeText}>
+                {t('exam.time_remaining', 'Time remaining')}: <Text style={styles.timerBadgeValue}>{timeLeft || '--:--'}</Text>
+              </Text>
+            </View>
+
+            <View style={styles.leaveModalActions}>
+              <TouchableOpacity 
+                style={styles.leaveCancelBtn} 
+                onPress={() => setShowLeaveModal(false)}
+              >
+                <Text style={styles.leaveCancelBtnText}>{t('common.cancel', 'Cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.leaveSubmitBtn} 
+                onPress={async () => {
+                  setShowLeaveModal(false);
+                  setIsSubmitted(true);
+                  if (assessment.currentAttemptId) {
+                    await dispatch(submitAssessment({
+                      assessmentId: assessment_id,
+                      attemptId: assessment.currentAttemptId
+                    }));
+                    router.push({
+                      pathname: '/(tabs)/levels/quiz-result',
+                      params: { 
+                        assessment_id: assessment_id,
+                        attempt_id: assessment.currentAttemptId
+                      }
+                    });
+                  } else {
+                    router.back();
+                  }
+                }}
+              >
+                <Text style={styles.leaveSubmitBtnText}>{t('exam.leave_submit', 'Leave & Submit')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Time Expired Modal */}
+      <Modal visible={showTimeExpiredModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.leaveModalContent}>
+            <View style={[styles.warningIconCircle, { backgroundColor: '#FEF2F2' }]}>
+              <Ionicons name="time-outline" size={ms(35)} color="#E11D48" />
+            </View>
+            <Text style={styles.leaveModalTitle}>{t('exam.time_expired', 'Time Expired!')}</Text>
+            <Text style={styles.leaveModalMessage}>
+              {t('exam.time_expired_message', 'Your time for this assessment has ended. Your answers will be submitted automatically.')}
+            </Text>
+            
+            <View style={[styles.leaveModalActions, { marginTop: hp(20) }]}>
+              <TouchableOpacity 
+                style={styles.leaveCancelBtn} 
+                onPress={() => {
+                  setShowTimeExpiredModal(false);
+                  router.back();
+                }}
+              >
+                <Text style={styles.leaveCancelBtnText}>{t('exam.exit', 'Exit')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.leaveSubmitBtn} 
+                onPress={async () => {
+                  setShowTimeExpiredModal(false);
+                  setIsSubmitted(true);
+                  if (assessment.currentAttemptId) {
+                    await dispatch(submitAssessment({
+                      assessmentId: assessment_id,
+                      attemptId: assessment.currentAttemptId
+                    }));
+                    router.push({
+                      pathname: '/(tabs)/levels/quiz-result',
+                      params: { 
+                        assessment_id: assessment_id,
+                        attempt_id: assessment.currentAttemptId
+                      }
+                    });
+                  } else {
+                    router.back();
+                  }
+                }}
+              >
+                <Text style={styles.leaveSubmitBtnText}>{t('exam.leave_submit', 'Leave & Submit')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* New Topic Details Card Header */}
+      <View style={[styles.detailsCard, { marginTop: insets.top + hp(10) }]}>
+        <View style={styles.detailsHeader}>
+          <View style={styles.detailsTitleContainer}>
+            <TouchableOpacity 
+              style={styles.backBtnSmall}
+              onPress={() => setShowLeaveModal(true)}
+            >
+               <Ionicons name="chevron-back" size={ms(20)} color="#3B82F6" />
+            </TouchableOpacity>
+            <View style={styles.topicIconBg}>
+               <Ionicons name="book-outline" size={ms(18)} color="#3B82F6" />
+            </View>
+            <Text style={styles.detailsTitle}>{t('levels.topic_details', 'Topic Details')}</Text>
+          </View>
+          <View style={styles.attemptsInfo}>
+            {timeLeft && (
+              <View style={styles.countdownContainer}>
+                <Ionicons name="timer-outline" size={ms(14)} color="#E11D48" />
+                <Text style={styles.countdownText}>{timeLeft}</Text>
+              </View>
+            )}
+            <Text style={styles.attemptsLabel}>
+              {t('exam.attempts', 'Attempts')}: <Text style={styles.attemptsValue}>{assessment.details?.attempts_count || 0} / {assessment.details?.attempts_limit || 0}</Text>
+            </Text>
+            <Text style={styles.remainingLabel}>
+              {t('exam.remaining', 'Remaining')}: <Text style={styles.remainingValue}>{(assessment.details?.attempts_limit || 0) - (assessment.details?.attempts_count || 0)}</Text>
+            </Text>
           </View>
         </View>
 
-        {timeLeft && (
-          <View style={styles.timerBox}>
-            <Ionicons name="time" size={ms(18)} color="#E11D48" />
-            <View style={styles.timerTextContainer}>
-              <Text style={styles.timerTime}>{timeLeft}</Text>
-              <Text style={styles.timerLabel}>Remaining</Text>
-            </View>
+        <View style={styles.detailsGrid}>
+          <View style={styles.detailItem}>
+             <Ionicons name="information-circle-outline" size={ms(14)} color="#64748B" />
+             <Text style={styles.detailText}>{t('exam.duration', 'Duration')}: <Text style={styles.detailValue}>{assessment.details?.duration || 0} {t('common.min', 'minutes')}</Text></Text>
           </View>
-        )}
+          <View style={styles.detailItem}>
+             <Ionicons name="time-outline" size={ms(14)} color="#64748B" />
+             <Text style={styles.detailText}>{t('exam.started_at', 'Started at')}: <Text style={styles.detailValue}>{assessment.details?.started_at ? new Date(assessment.details.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}</Text></Text>
+          </View>
+          <View style={styles.detailItem}>
+             <Ionicons name="time-outline" size={ms(14)} color="#64748B" />
+             <Text style={styles.detailText}>{t('exam.expires_at', 'Expires at')}: <Text style={styles.detailValue}>{assessment.details?.expires_at ? new Date(assessment.details.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}</Text></Text>
+          </View>
+          <View style={styles.detailItem}>
+             <Ionicons name="help-circle-outline" size={ms(14)} color="#64748B" />
+             <Text style={styles.detailText}>{t('exam.attempt_id', 'Attempt ID')}: <Text style={styles.detailValue}>#{assessment.currentAttemptId}</Text></Text>
+          </View>
+        </View>
       </View>
 
       {/* Main Content */}
@@ -245,16 +455,21 @@ export default function ExamScreen() {
           {/* Progress Section */}
           <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
-              <View>
-                <Text style={styles.progressLabel}>PROGRESS</Text>
-                <Text style={styles.progressText}>
-                  Question <Text style={styles.activeQuestionText}>{currentQuestionIndex + 1}</Text> of {questions.length}
-                </Text>
-              </View>
+              <Text style={styles.progressText}>
+                {t('exam.question', 'Question')} <Text style={styles.activeQuestionText}>{currentQuestionIndex + 1}</Text> {t('exam.of', 'of')} {questions.length}
+              </Text>
+              
+              {selectedOptionId === null && currentQuestion.selected_option_id === null && (
+                <View style={styles.skippedBadge}>
+                  <MaterialCommunityIcons name="fast-forward" size={ms(12)} color="#F97316" />
+                  <Text style={styles.skippedBadgeText}>{t('exam.skipped', 'Skipped')}</Text>
+                </View>
+              )}
+
               {isAnswerSelected && (
                 <View style={styles.answerStatusBadge}>
                   <Ionicons name="checkmark-circle" size={ms(12)} color="#10B981" />
-                  <Text style={styles.answerSelectedText}>SAVED</Text>
+                  <Text style={styles.answerSelectedText}>{t('exam.saved', 'SAVED')}</Text>
                 </View>
               )}
             </View>
@@ -263,12 +478,10 @@ export default function ExamScreen() {
             </View>
           </View>
 
-          <View style={styles.divider} />
-
           {/* Question Section */}
           <View style={styles.questionContent}>
             <Text style={styles.questionText}>
-              {currentQuestion.question_text || currentQuestion.text}
+              {currentQuestion.question_text || currentQuestion.text || `Question ${currentQuestionIndex + 1}`}
             </Text>
 
             {currentQuestion.file && (
@@ -276,7 +489,7 @@ export default function ExamScreen() {
                 <Image source={{ uri: currentQuestion.file }} style={styles.questionImage} resizeMode="contain" />
                 <View style={styles.zoomBadge}>
                   <Ionicons name="expand-outline" size={ms(12)} color="#fff" />
-                  <Text style={styles.zoomText}>Tap to Zoom</Text>
+                  <Text style={styles.zoomText}>{t('exam.tap_zoom', 'Tap to Zoom')}</Text>
                 </View>
               </TouchableOpacity>
             )}
@@ -338,13 +551,14 @@ export default function ExamScreen() {
               onPress={handlePrev}
               disabled={currentQuestionIndex === 0}
             >
-              <Ionicons name="arrow-back" size={ms(16)} color="#475569" />
-              <Text style={styles.navBtnPrevText}>Back</Text>
+              <Ionicons name="chevron-back" size={ms(16)} color="#475569" />
+              <Text style={styles.navBtnPrevText}>{t('exam.previous', 'Previous')}</Text>
             </TouchableOpacity>
 
             <View style={styles.rightNavs}>
               <TouchableOpacity style={styles.navBtnSkip} onPress={handleSkip}>
-                <Text style={styles.navBtnSkipText}>Skip</Text>
+                <MaterialCommunityIcons name="skip-next-outline" size={ms(18)} color="#475569" style={{marginRight: 4}} />
+                <Text style={styles.navBtnSkipText}>{t('exam.skip', 'Skip')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -353,9 +567,9 @@ export default function ExamScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.navBtnNextText}>
-                  {currentQuestionIndex === questions.length - 1 ? 'Finish' : 'Next'}
+                  {currentQuestionIndex === questions.length - 1 ? t('exam.submit', 'Submit') : t('exam.next', 'Next')}
                 </Text>
-                <Ionicons name="arrow-forward" size={ms(16)} color="#fff" />
+                <Ionicons name="chevron-forward" size={ms(16)} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
@@ -381,125 +595,166 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
   },
-  header: {
+  detailsCard: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: ms(12),
+    padding: ms(15),
+    marginHorizontal: wp(20),
+    marginBottom: hp(20),
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  detailsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: wp(15),
-    paddingBottom: hp(15),
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
     marginBottom: hp(15),
-    flexWrap: 'wrap',
-    gap: hp(10),
   },
-  headerLeft: {
+  detailsTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    minWidth: '60%',
   },
-  backButtonCircle: {
-    width: ms(40),
-    height: ms(40),
-    borderRadius: ms(20),
-    backgroundColor: '#F1F5F9',
+  topicIconBg: {
+    width: ms(32),
+    height: ms(32),
+    borderRadius: ms(8),
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: wp(12),
+    marginRight: wp(10),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  headerTitleContainer: {
-    flex: 1,
-  },
-  headerTitle: {
+  detailsTitle: {
+    fontSize: fs(15),
+    fontWeight: '700',
     color: '#1E293B',
-    fontSize: fs(18),
-    fontWeight: '800',
-    marginBottom: hp(2),
   },
-  headerSubtitle: {
-    color: '#64748B',
-    fontSize: fs(12),
-    fontWeight: '500',
+  attemptsInfo: {
+    alignItems: 'flex-end',
   },
-  timerBox: {
+  countdownContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF1F2',
-    paddingHorizontal: wp(12),
-    paddingVertical: hp(8),
-    borderRadius: ms(12),
-    borderWidth: 1,
-    borderColor: '#FFE4E6',
-    marginLeft: wp(10),
+    backgroundColor: '#FFE4E6',
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(2),
+    borderRadius: ms(6),
+    marginBottom: hp(4),
   },
-  timerTextContainer: {
-    marginLeft: wp(8),
-  },
-  timerTime: {
-    fontSize: fs(14),
+  countdownText: {
+    fontSize: fs(12),
     fontWeight: '800',
-    color: '#FB7185',
+    color: '#E11D48',
+    marginLeft: wp(4),
   },
-  timerLabel: {
-    fontSize: fs(8),
+  attemptsLabel: {
+    fontSize: fs(11),
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  attemptsValue: {
+    color: '#1E293B',
     fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
+  },
+  remainingLabel: {
+    fontSize: fs(11),
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  remainingValue: {
+    color: '#16A34A',
+    fontWeight: '700',
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(10),
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+    marginBottom: hp(6),
+  },
+  detailText: {
+    fontSize: fs(11),
+    color: '#64748B',
+    marginLeft: wp(6),
+    fontWeight: '500',
+  },
+  detailValue: {
+    color: '#1E293B',
+    fontWeight: '700',
   },
   questionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: ms(20),
-    padding: ms(20),
+    borderRadius: ms(16),
+    padding: ms(15),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 2,
   },
   progressContainer: {
-    marginBottom: hp(15),
+    marginBottom: hp(20),
   },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     marginBottom: hp(10),
   },
-  progressLabel: {
-    fontSize: fs(10),
-    color: '#64748B',
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: hp(2),
-  },
   progressText: {
-    fontSize: fs(14),
-    color: '#94A3B8',
+    fontSize: fs(13),
+    color: '#64748B',
     fontWeight: '600',
   },
   activeQuestionText: {
-    color: '#3B82F6',
+    color: '#1E293B',
     fontWeight: '800',
+  },
+  skippedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(4),
+    borderRadius: ms(6),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+  },
+  skippedBadgeText: {
+    fontSize: fs(10),
+    color: '#F97316',
+    fontWeight: '700',
+    marginLeft: wp(4),
   },
   answerStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: '#F0FDF4',
     paddingHorizontal: wp(8),
     paddingVertical: hp(4),
     borderRadius: ms(6),
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
   },
   answerSelectedText: {
     fontSize: fs(10),
     color: '#10B981',
-    fontWeight: '800',
+    fontWeight: '700',
     marginLeft: wp(4),
   },
   progressBarTrack: {
-    height: hp(6),
+    height: hp(5),
     backgroundColor: '#F1F5F9',
     borderRadius: ms(3),
     width: '100%',
@@ -507,23 +762,18 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#3B82F6',
     borderRadius: ms(3),
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: hp(15),
-  },
   questionContent: {
-    minHeight: hp(250),
+    minHeight: hp(200),
   },
   questionText: {
     fontSize: fs(18),
     fontWeight: '700',
     color: '#1E293B',
-    lineHeight: fs(26),
-    marginBottom: hp(25),
+    lineHeight: fs(24),
+    marginBottom: hp(20),
   },
   imageContainer: {
     marginVertical: hp(10),
@@ -576,6 +826,117 @@ const styles = StyleSheet.create({
     minWidth: wp(60),
     textAlign: 'center',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: wp(20),
+  },
+  leaveModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: ms(24),
+    padding: ms(24),
+    width: '100%',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  closeModalX: {
+    position: 'absolute',
+    top: ms(16),
+    right: ms(16),
+    padding: ms(4),
+  },
+  warningIconContainer: {
+    marginBottom: hp(20),
+  },
+  warningIconCircle: {
+    width: ms(64),
+    height: ms(64),
+    borderRadius: ms(32),
+    backgroundColor: '#FFF7ED',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaveModalTitle: {
+    fontSize: fs(22),
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: hp(12),
+  },
+  leaveModalMessage: {
+    fontSize: fs(14),
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: fs(22),
+    marginBottom: hp(8),
+  },
+  leaveModalHighlight: {
+    fontSize: fs(14),
+    color: '#F97316',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: hp(24),
+  },
+  timerBadge: {
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(12),
+    borderRadius: ms(12),
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: hp(30),
+  },
+  timerBadgeText: {
+    fontSize: fs(14),
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  timerBadgeValue: {
+    color: '#2563EB',
+    fontWeight: '800',
+  },
+  leaveModalActions: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: wp(12),
+  },
+  leaveCancelBtn: {
+    flex: 1,
+    height: hp(50),
+    borderRadius: ms(14),
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaveCancelBtnText: {
+    fontSize: fs(15),
+    fontWeight: '700',
+    color: '#475569',
+  },
+  leaveSubmitBtn: {
+    flex: 1,
+    height: hp(50),
+    borderRadius: ms(14),
+    backgroundColor: '#F97316',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#F97316',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  leaveSubmitBtnText: {
+    fontSize: fs(15),
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  backBtnSmall: {
+    padding: ms(4),
+    marginRight: wp(4),
+  },
   closeModal: {
     marginLeft: wp(20),
   },
@@ -589,36 +950,36 @@ const styles = StyleSheet.create({
     height: hp(70),
   },
   optionsList: {
-    gap: hp(12),
-    marginBottom: hp(30),
+    gap: hp(10),
+    marginBottom: hp(20),
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: ms(18),
-    borderRadius: ms(12),
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    padding: ms(15),
+    borderRadius: ms(10),
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
   },
   optionCardSelected: {
-    borderColor: '#2563EB',
+    borderColor: '#3B82F6',
     backgroundColor: '#EFF6FF',
   },
   optionIcon: {
-    width: ms(22),
-    height: ms(22),
-    borderRadius: ms(11),
-    borderWidth: 2,
-    borderColor: '#475569',
+    width: ms(20),
+    height: ms(20),
+    borderRadius: ms(10),
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: wp(15),
-    backgroundColor: 'transparent',
+    marginRight: wp(12),
+    backgroundColor: '#FFFFFF',
   },
   optionIconSelected: {
     borderColor: '#3B82F6',
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#FFFFFF',
   },
   optionText: {
     flex: 1,
@@ -627,14 +988,14 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   optionTextSelected: {
-    color: '#1E3A8A',
+    color: '#3B82F6',
     fontWeight: '700',
   },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: hp(25),
+    paddingTop: hp(20),
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
@@ -643,33 +1004,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: hp(10),
-    paddingHorizontal: wp(18),
-    borderRadius: ms(10),
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    paddingHorizontal: wp(15),
+    borderRadius: ms(8),
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    minWidth: wp(90),
   },
   navBtnPrevText: {
     fontSize: fs(14),
-    fontWeight: '700',
-    color: '#475569',
-    marginLeft: wp(6),
+    fontWeight: '600',
+    color: '#64748B',
+    marginLeft: wp(4),
   },
   rightNavs: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   navBtnSkip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: hp(10),
-    paddingHorizontal: wp(15),
+    paddingHorizontal: wp(12),
+    borderRadius: ms(8),
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     marginRight: wp(10),
   },
   navBtnSkipText: {
     fontSize: fs(14),
     fontWeight: '600',
     color: '#64748B',
-    textDecorationLine: 'underline',
   },
   navBtnNext: {
     flexDirection: 'row',
@@ -677,19 +1042,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#2563EB',
     paddingVertical: hp(10),
-    paddingHorizontal: wp(22),
-    borderRadius: ms(10),
-    minWidth: wp(100),
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: wp(20),
+    borderRadius: ms(8),
+    minWidth: wp(90),
   },
   navBtnNextText: {
     color: '#fff',
     fontSize: fs(14),
-    fontWeight: '800',
-    marginRight: wp(6),
+    fontWeight: '700',
+    marginRight: wp(4),
   },
 });

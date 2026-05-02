@@ -1,20 +1,29 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import i18n from '../../i18n';
 
 const BASE_URL = 'https://lms-backend.netswaptech.com/api/v1';
 const ACCESS_TOKEN_KEY = 'auth_access_token';
+const DEVICE_ID_KEY = 'auth_device_id';
 
 let inMemoryToken = null;
 
-const extractErrorMessage = (payload) => {
+const generateRandomId = () => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+const extractErrorMessage = (payload, status) => {
+  const defaultMsg = status ? `Something went wrong (Status: ${status})` : 'Something went wrong.';
+
   if (!payload) {
-    return 'Something went wrong.';
+    return defaultMsg;
   }
 
   if (typeof payload === 'string') {
     return payload;
   }
 
+  // Handle common API error structures
   if (typeof payload.message === 'string' && payload.message.trim()) {
     return payload.message;
   }
@@ -37,7 +46,7 @@ const extractErrorMessage = (payload) => {
     return payload.data.message;
   }
 
-  return 'Something went wrong.';
+  return defaultMsg;
 };
 
 const parseApiResponse = async (response) => {
@@ -79,11 +88,29 @@ export const clearAccessToken = async () => {
   await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
 };
 
+export const getOrGenerateDeviceId = async () => {
+  try {
+    let deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY);
+    if (!deviceId) {
+      // Generate a unique ID (random string)
+      deviceId = generateRandomId();
+      await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId);
+    }
+    return deviceId;
+  } catch (error) {
+    console.warn('Error handling device ID:', error);
+    return 'unknown-device';
+  }
+};
+
 export const buildAuthHeaders = async (customHeaders = {}) => {
   const token = await loadAccessToken();
+  const deviceId = await getOrGenerateDeviceId();
+  
   return {
     Accept: 'application/json',
     'Accept-Language': i18n.language || 'en',
+    'X-Device-Id': deviceId,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...customHeaders,
   };
@@ -114,7 +141,10 @@ export const apiRequest = async ({
   }
 
   if (!response.ok) {
-    const errorMessage = extractErrorMessage(data);
+    if (response.status === 401) {
+      await clearAccessToken();
+    }
+    const errorMessage = extractErrorMessage(data, response.status);
     throw new Error(errorMessage);
   }
 

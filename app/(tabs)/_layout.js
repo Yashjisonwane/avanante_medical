@@ -1,21 +1,32 @@
-import { Tabs, usePathname } from 'expo-router';
+import { useEffect } from 'react';
+import { Tabs, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { AppColors } from '../../constants/Theme';
 import { hp, wp, ms, fs } from '../../utils/responsive';
 
 export default function TabLayout() {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated, isHydrated } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (isHydrated && !isAuthenticated) {
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isHydrated, router]);
 
   // Helper to determine if a tab should be highlighted
   const isTabActive = (tabName) => {
     if (tabName === 'home') return pathname === '/home' || pathname === '/index' || pathname === '/';
     if (tabName === 'levels') return pathname.startsWith('/levels');
     if (tabName === 'analytics') return pathname.startsWith('/analytics');
+    if (tabName === 'assessment') return pathname.startsWith('/assessment');
     if (tabName === 'profile') return pathname.startsWith('/profile');
     return false;
   };
@@ -83,6 +94,20 @@ export default function TabLayout() {
           ),
           tabBarLabelStyle: {
             color: isTabActive('analytics') ? AppColors.primary : AppColors.placeholder,
+            fontSize: 12,
+            fontWeight: '500',
+          }
+        }}
+      />
+      <Tabs.Screen
+        name="assessment"
+        options={{
+          title: t('tabs.assessment', { defaultValue: 'Assessment' }),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name={isTabActive('assessment') ? "clipboard" : "clipboard-outline"} size={26} color={isTabActive('assessment') ? AppColors.primary : color} />
+          ),
+          tabBarLabelStyle: {
+            color: isTabActive('assessment') ? AppColors.primary : AppColors.placeholder,
             fontSize: 12,
             fontWeight: '500',
           }

@@ -62,6 +62,8 @@ export const Colors = {
   error: AppColors.danger,
 };
 
+import { wp } from '../utils/responsive';
+
 export const Spacing = {
   xs: 4,
   sm: 8,
@@ -69,6 +71,7 @@ export const Spacing = {
   lg: 24,
   xl: 32,
   xxl: 40,
+  SCREEN_PADDING: wp(20),
 };
 
 export const Typography = {

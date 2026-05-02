@@ -1,12 +1,13 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { apiRequest } from '../api/baseApi';
+import i18n from '../../i18n';
 
 // Thunks — All using Hierarchy API endpoints
 export const fetchLevelProgress = createAsyncThunk(
   'course/fetchLevelProgress',
   async (levelId) => {
     return apiRequest({
-      endpoint: `/trainee/hierarchy/level/${levelId}`,
+      endpoint: `/trainee/hierarchy/level/${levelId}?lang=${i18n.language}`,
       method: 'GET',
     });
   }
@@ -16,7 +17,7 @@ export const fetchModuleProgress = createAsyncThunk(
   'course/fetchModuleProgress',
   async (moduleId) => {
     return apiRequest({
-      endpoint: `/trainee/hierarchy/module/${moduleId}`,
+      endpoint: `/trainee/hierarchy/module/${moduleId}?lang=${i18n.language}`,
       method: 'GET',
     });
   }
@@ -36,7 +37,7 @@ export const fetchTopicProgress = createAsyncThunk(
   'course/fetchTopicProgress',
   async (topicId) => {
     return apiRequest({
-      endpoint: `/trainee/hierarchy/topic/${topicId}`,
+      endpoint: `/trainee/hierarchy/topic/${topicId}?lang=${i18n.language}`,
       method: 'GET',
     });
   }
@@ -46,9 +47,9 @@ export const getHierarchyThunk = createAsyncThunk(
   'course/fetchCourseHierarchy',
   async (params = {}) => {
     const { type, id } = params;
-    let endpoint = '/trainee/hierarchy';
+    let endpoint = `/trainee/hierarchy?lang=${i18n.language}`;
     if (type && id) {
-      endpoint = `/trainee/hierarchy/${type}/${id}`;
+      endpoint = `/trainee/hierarchy/${type}/${id}?lang=${i18n.language}`;
     }
     return apiRequest({
       endpoint,
@@ -69,7 +70,7 @@ export const fetchChapterHierarchy = createAsyncThunk(
 
 export const fetchTopicContent = createAsyncThunk(
   'course/fetchTopicContent',
-  async ({ topicId, page = 1, lang = 'en' }) => {
+  async ({ topicId, page = 1, lang = i18n.language }) => {
     return apiRequest({
       endpoint: `/trainee/content/topics/${topicId}?page=${page}&lang=${lang}`,
       method: 'GET',
@@ -91,7 +92,7 @@ export const fetchSinglePreview = createAsyncThunk(
   'course/fetchSinglePreview',
   async ({ topicId, contentId }) => {
     return apiRequest({
-      endpoint: `/trainee/content/single-preview/${topicId}/${contentId}`,
+      endpoint: `/trainee/content/single-preview/${topicId}/${contentId}?lang=${i18n.language}`,
       method: 'GET',
     });
   }
@@ -146,6 +147,27 @@ export const submitAssessment = createAsyncThunk(
       endpoint: `/trainee/assessments/${assessmentId}/submit`,
       method: 'POST',
       body: { attempt_id: attemptId },
+    });
+  }
+);
+
+export const submitAssessmentFeedback = createAsyncThunk(
+  'course/submitAssessmentFeedback',
+  async ({ assessmentId, payload }) => {
+    return apiRequest({
+      endpoint: `/trainee/assessments/${assessmentId}/feedback`,
+      method: 'POST',
+      body: payload,
+    });
+  }
+);
+
+export const fetchTopicFaqs = createAsyncThunk(
+  'course/fetchTopicFaqs',
+  async (topicId) => {
+    return apiRequest({
+      endpoint: `/trainee/faqs/topic/${topicId}?lang=${i18n.language}`,
+      method: 'GET',
     });
   }
 );
@@ -347,13 +369,26 @@ const courseSlice = createSlice({
         state.loading.assessmentAction = false;
         state.assessment.currentAttemptId = action.payload.data?.attempt_id || action.payload.attempt_id;
       })
+      .addCase(startAssessment.rejected, (state, action) => {
+        state.loading.assessmentAction = false;
+        state.assessment.error = action.error.message;
+      })
+      .addCase(resumeAssessment.fulfilled, (state, action) => {
+        state.assessment.currentAttemptId = action.payload.data?.attempt_id || action.payload.attempt_id;
+      })
+      .addCase(resumeAssessment.rejected, (state, action) => {
+        state.assessment.error = action.error.message;
+      })
       .addCase(fetchAssessmentQuestions.fulfilled, (state, action) => {
         const payload = action.payload.data || action.payload;
         state.assessment.questions = payload.questions || [];
         state.assessment.details = {
+          assessment_id: action.meta.arg.assessmentId,
           duration: payload.duration,
           expires_at: payload.expires_at,
           started_at: payload.started_at,
+          attempts_limit: payload.attempts_limit,
+          attempts_count: payload.attempts_count,
           title: state.assessment.details?.title, // Preserve title if exists
         };
       })

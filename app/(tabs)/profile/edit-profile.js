@@ -18,15 +18,21 @@ const FormField = ({ label, placeholder, value, onChangeText, secureTextEntry = 
   </View>
 );
 
-const SelectField = ({ label, placeholder, value }) => (
-  <View style={styles.fieldContainer}>
-    <Text style={styles.fieldLabel}>{label}</Text>
-    <TouchableOpacity style={styles.selectInput}>
-      <Text style={value ? styles.selectValue : styles.selectPlaceholder}>{value || placeholder}</Text>
-      <Ionicons name="chevron-down" size={ms(20)} color={AppColors.textSecondary} />
-    </TouchableOpacity>
-  </View>
-);
+const SelectField = ({ label, placeholder, value }) => {
+  const displayValue = typeof value === 'object' && value !== null ? (value.name || value.label || '') : value;
+  
+  return (
+    <View style={styles.fieldContainer}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TouchableOpacity style={styles.selectInput}>
+        <Text style={displayValue ? styles.selectValue : styles.selectPlaceholder}>
+          {displayValue || placeholder}
+        </Text>
+        <Ionicons name="chevron-down" size={ms(20)} color={AppColors.textSecondary} />
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 export default function EditProfileScreen() {
   const insets = useSafeAreaInsets();

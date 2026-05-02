@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
 import { fetchTopicContent, toggleTopicContentRead } from '../../../redux/slices/courseSlice';
@@ -19,6 +20,7 @@ import i18n from '../../../i18n';
 const ContentCard = ({ item, topicId }) => {
   const router = useRouter();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const [toggling, setToggling] = useState(false);
 
   const isRead = item.is_read == 1 || item.is_read == true || item.is_read == 'true';
@@ -60,19 +62,19 @@ const ContentCard = ({ item, topicId }) => {
             color="#3B82F6"
           />
           <Text style={styles.typeBadgeText}>
-            {isMedia ? 'MEDIA TOPIC' : 'TEXT TOPIC'}
+            {isMedia ? t('levels.media_topic', 'MEDIA TOPIC') : t('levels.text_topic', 'TEXT TOPIC')}
           </Text>
         </View>
 
         {isRead ? (
           <View style={styles.statusBadgeRead}>
             <Ionicons name="checkmark-circle" size={ms(14)} color="#10B981" />
-            <Text style={styles.statusTextRead}>Read</Text>
+            <Text style={styles.statusTextRead}>{t('common.read', 'Read')}</Text>
           </View>
         ) : (
           <View style={styles.statusBadge}>
             <Ionicons name="ellipse-outline" size={ms(14)} color="#94A3B8" />
-            <Text style={styles.statusText}>Unread</Text>
+            <Text style={styles.statusText}>{t('common.unread', 'Unread')}</Text>
           </View>
         )}
       </View>
@@ -82,7 +84,7 @@ const ContentCard = ({ item, topicId }) => {
           {item.title}
         </Text>
         <Text style={styles.contentSubtitle}>
-          Topic {item.order || item.id}
+          {t('levels.topic', 'Topic')} {item.order || item.id}
         </Text>
       </View>
 
@@ -97,7 +99,7 @@ const ContentCard = ({ item, topicId }) => {
           ) : (
             <>
               <Ionicons name="eye" size={ms(14)} color="#3B82F6" />
-              <Text style={styles.viewButtonText}>View Topic</Text>
+              <Text style={styles.viewButtonText}>{t('levels.view_topic', 'View Topic')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -111,6 +113,7 @@ export default function TopicDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   
   const { topicContent, loading } = useSelector((state) => state.course);
 
@@ -138,8 +141,8 @@ export default function TopicDetailsScreen() {
           <Ionicons name="arrow-back" size={ms(20)} color="#1E3A8A" />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
-          <Text style={styles.screenTitle}>Learning Topics</Text>
-          <Text style={styles.screenSubtitle}>Browse through your learning materials</Text>
+          <Text style={styles.screenTitle}>{t('levels.learning_topics', 'Learning Topics')}</Text>
+          <Text style={styles.screenSubtitle}>{t('levels.browse_materials', 'Browse through your learning materials')}</Text>
         </View>
       </View>
 
@@ -155,7 +158,7 @@ export default function TopicDetailsScreen() {
         
         {contentList.length > 0 && (
           <Text style={styles.footerText}>
-            Showing {contentList.length} of {topicContent?.total || contentList.length} topics
+            {t('common.showing', 'Showing')} {contentList.length} {t('levels.of', 'of')} {topicContent?.total || contentList.length} {t('levels.topics', 'topics')}
           </Text>
         )}
       </ScrollView>
