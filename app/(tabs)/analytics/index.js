@@ -259,6 +259,69 @@ export default function AnalyticsScreen() {
               )}
             </View>
           ))}
+
+          {/* Audit Logs Card */}
+          <View style={styles.auditLogCard}>
+            <View style={styles.progressCardHeader}>
+              <View style={styles.progressInfo}>
+                <View style={[styles.iconContainer, { backgroundColor: '#F0FDF4' }]}>
+                  <Ionicons name="list" size={ms(24)} color="#10B981" />
+                </View>
+                <View style={styles.progressTextBlock}>
+                  <Text style={styles.progressTitle}>{t('analytics.audit_logs', { defaultValue: 'System Audit Logs' })}</Text>
+                  <Text style={styles.progressSubtitle}>{t('analytics.audit_logs_desc', { defaultValue: 'Track all your activity and system events' })}</Text>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
+              onPress={() => router.push('/(tabs)/analytics/audit-logs')}
+            >
+              <Text style={styles.actionBtnText}>{t('analytics.view_audit_logs', { defaultValue: 'Click to View Audit Logs' })}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* User Progress Card */}
+          <View style={[styles.auditLogCard, { borderColor: '#E3F2FD' }]}>
+            <View style={styles.progressCardHeader}>
+              <View style={styles.progressInfo}>
+                <View style={[styles.iconContainer, { backgroundColor: '#EFF6FF' }]}>
+                  <Ionicons name="bar-chart" size={ms(24)} color={AppColors.primary} />
+                </View>
+                <View style={styles.progressTextBlock}>
+                  <Text style={styles.progressTitle}>{t('analytics.user_progress', { defaultValue: 'User Progress Report' })}</Text>
+                  <Text style={styles.progressSubtitle}>{t('analytics.user_progress_desc', { defaultValue: 'Detailed tracking of levels, chapters and topics' })}</Text>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
+              onPress={() => router.push('/(tabs)/analytics/user-progress')}
+            >
+              <Text style={styles.actionBtnText}>{t('analytics.view_user_progress', { defaultValue: 'Click to View Progress' })}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Certification Report Card */}
+          <View style={[styles.auditLogCard, { borderColor: '#F3E5F5' }]}>
+            <View style={styles.progressCardHeader}>
+              <View style={styles.progressInfo}>
+                <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
+                  <Ionicons name="ribbon" size={ms(24)} color="#7B1FA2" />
+                </View>
+                <View style={styles.progressTextBlock}>
+                  <Text style={styles.progressTitle}>{t('analytics.certification_report', { defaultValue: 'Certification Report' })}</Text>
+                  <Text style={styles.progressSubtitle}>{t('analytics.certification_report_desc', { defaultValue: 'View and download all your earned certificates' })}</Text>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
+              onPress={() => router.push('/(tabs)/analytics/certification-report')}
+            >
+              <Text style={styles.actionBtnText}>{t('analytics.view_certifications', { defaultValue: 'Click to View Certificates' })}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -531,6 +594,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
+  },
+  auditLogCard: {
+    backgroundColor: AppColors.backgroundWhite,
+    borderRadius: ms(16),
+    padding: wp(16),
+    marginTop: hp(10),
+    marginBottom: hp(14),
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8F5E9',
   },
   progressCardHeader: {
     flexDirection: 'row',

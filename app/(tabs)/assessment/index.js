@@ -19,7 +19,7 @@ import { apiRequest } from '../../../redux/api/baseApi';
 export default function AssessmentScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   
   const [activeTab, setActiveTab] = useState('quiz'); // 'quiz' | 'exam'
   const [data, setData] = useState([]);
@@ -32,10 +32,12 @@ export default function AssessmentScreen() {
     try {
       // type can be 'topic' for Quiz or 'level' for Exam
       const response = await apiRequest({
-        endpoint: `/trainee/reports/assessment-report?page=1&per_page=10&type=${type}`,
+        endpoint: `/trainee/reports/assessment-report?page=1&per_page=10&type=${type}&lang=${i18n.language}`,
         method: 'GET',
       });
       
+      // Data extraction logic:
+      // The API structure is usually response.data.data
       const responseData = response?.data?.data || response?.data || [];
       setData(Array.isArray(responseData) ? responseData : []);
     } catch (err) {
@@ -52,29 +54,113 @@ export default function AssessmentScreen() {
 
   const renderItem = ({ item }) => {
     if (!item) return null;
-    const title = String(item?.assessment?.title || item?.title || 'Assessment');
-    const score = Number(item?.score ?? item?.marks_obtained ?? 0);
-    const total = Number(item?.total_marks ?? item?.assessment?.total_marks ?? 100);
-    const statusString = String(item?.status || (score >= (total / 2) ? 'Passed' : 'Failed'));
-    const isPassed = statusString.toLowerCase() === 'passed' || statusString.toLowerCase() === 'completed';
+    
+    // Data Extraction
+    const assessment = item?.assessment || {};
+    const title = String(assessment?.title || item?.title || 'Assessment');
+    const score = Number(item?.marks_obtained ?? item?.score ?? 0);
+    const total = Number(assessment?.total_marks ?? item?.total_marks ?? 100);
+    const percentage = total > 0 ? ((score / total) * 100).toFixed(2) : '0.00';
+    
+    const status = String(item?.status || 'FAILED').toUpperCase();
+    const isPassed = status === 'PASSED' || status === 'COMPLETED';
+    const isInProgress = status === 'IN_PROGRESS';
+    
+    const correct = item?.correct_answers_count ?? 0;
+    const incorrect = item?.wrong_answers_count ?? 0;
+    const skipped = item?.skipped_questions_count ?? 0;
+    
+    const attempt = item?.attempt_number || 1;
+    const date = item?.created_at ? new Date(item.created_at).toLocaleString() : 'N/A';
+    
+    const trainee = item?.trainee || {};
+    const userName = trainee?.name || 'User';
+    const userEmail = trainee?.email || '';
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="clipboard" size={ms(24)} color={AppColors.primary} />
+        {/* Row 1: User & Assessment Info */}
+        <View style={styles.cardSection}>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{userName}</Text>
+            {userEmail ? <Text style={styles.userEmail}>{userEmail}</Text> : null}
           </View>
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>{title}</Text>
-            <Text style={styles.cardSubtitle}>
-              {t('assessment.score', { defaultValue: 'Score' })}: {score}/{total}
-            </Text>
+          <View style={styles.assessmentInfo}>
+            <Text style={styles.infoLabel}>{t('assessment.type', { defaultValue: 'Assessment' })}</Text>
+            <Text style={styles.infoValue}>{title}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: isPassed ? '#E8F5E9' : '#FFEBEE' }]}>
-            <Text style={[styles.statusText, { color: isPassed ? '#4CAF50' : '#F44336' }]}>
-              {statusString}
-            </Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Row 2: Score & Status */}
+        <View style={styles.cardSection}>
+          <View style={styles.statsBox}>
+            <Text style={styles.infoLabel}>{t('assessment.score_percent', { defaultValue: 'Score / Percentage' })}</Text>
+            <Text style={styles.scoreValue}>{score} / {total}</Text>
+            <Text style={styles.percentValue}>{percentage}%</Text>
           </View>
+          <View style={styles.statusBox}>
+            <Text style={styles.infoLabel}>{t('assessment.status', { defaultValue: 'Status' })}</Text>
+            <View style={[
+              styles.statusBadge, 
+              { backgroundColor: isPassed ? '#E8F5E9' : isInProgress ? '#FFF3E0' : '#FFEBEE' }
+            ]}>
+              <Text style={[
+                styles.statusText, 
+                { color: isPassed ? '#2E7D32' : isInProgress ? '#EF6C00' : '#C62828' }
+              ]}>
+                {status}
+              </Text>
+            </View>
+            <Text style={styles.passingText}>{t('assessment.passing', { defaultValue: 'Passing: 60%' })}</Text>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Row 3: Answers & Attempt */}
+        <View style={styles.cardSection}>
+          <View style={styles.answersBox}>
+            <Text style={styles.infoLabel}>{t('assessment.answers', { defaultValue: 'Answers' })}</Text>
+            <View style={styles.answerRow}>
+              <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+              <Text style={styles.answerText}> {t('assessment.correct', { defaultValue: 'Correct' })}: {correct}</Text>
+            </View>
+            <View style={styles.answerRow}>
+              <Ionicons name="close-circle" size={14} color="#F44336" />
+              <Text style={styles.answerText}> {t('assessment.incorrect', { defaultValue: 'Incorrect' })}: {incorrect}</Text>
+            </View>
+            <View style={styles.answerRow}>
+              <Ionicons name="help-circle" size={14} color="#757575" />
+              <Text style={styles.answerText}> {t('assessment.skipped', { defaultValue: 'Skipped' })}: {skipped}</Text>
+            </View>
+          </View>
+          <View style={styles.attemptBox}>
+            <Text style={styles.infoLabel}>{t('assessment.attempt', { defaultValue: 'Attempt' })}</Text>
+            <Text style={styles.attemptValue}>Attempt #{attempt}</Text>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Row 4: Date & Action */}
+        <View style={styles.cardFooter}>
+          <View style={styles.dateBox}>
+            <Ionicons name="time-outline" size={14} color={AppColors.textSecondary} />
+            <Text style={styles.dateText}> {date}</Text>
+          </View>
+          {isPassed && (
+            <TouchableOpacity 
+              style={styles.certificateBtn}
+              onPress={() => router.push({
+                pathname: '/analytics/certificate',
+                params: { assessmentId: assessment?.id }
+              })}
+            >
+              <Text style={styles.certificateBtnText}>{t('assessment.view_certificate', { defaultValue: 'View Certificate' })}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -209,48 +295,132 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.backgroundWhite,
     borderRadius: ms(16),
     padding: wp(16),
-    marginBottom: hp(14),
-    elevation: 4,
+    marginBottom: hp(16),
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  cardHeader: {
+  cardSection: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: hp(8),
   },
-  iconContainer: {
-    width: wp(48),
-    height: wp(48),
-    borderRadius: ms(10),
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: wp(12),
-  },
-  cardInfo: {
+  userInfo: {
     flex: 1,
   },
-  cardTitle: {
-    fontSize: fs(14),
+  userName: {
+    fontSize: fs(15),
     fontWeight: '700',
     color: AppColors.textDark,
+  },
+  userEmail: {
+    fontSize: fs(12),
+    color: AppColors.textSecondary,
+    marginTop: hp(2),
+  },
+  assessmentInfo: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  infoLabel: {
+    fontSize: fs(11),
+    fontWeight: '600',
+    color: AppColors.placeholder,
+    textTransform: 'uppercase',
     marginBottom: hp(4),
   },
-  cardSubtitle: {
+  infoValue: {
+    fontSize: fs(14),
+    fontWeight: '700',
+    color: AppColors.primary,
+    textAlign: 'right',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: AppColors.border,
+    marginVertical: hp(4),
+  },
+  statsBox: {
+    flex: 1,
+  },
+  scoreValue: {
+    fontSize: fs(15),
+    fontWeight: '700',
+    color: AppColors.textDark,
+  },
+  percentValue: {
     fontSize: fs(12),
-    fontWeight: '500',
     color: AppColors.textSecondary,
+    marginTop: hp(2),
+  },
+  statusBox: {
+    flex: 1,
+    alignItems: 'flex-end',
   },
   statusBadge: {
     paddingHorizontal: wp(10),
     paddingVertical: hp(4),
     borderRadius: ms(12),
+    marginBottom: hp(4),
   },
   statusText: {
-    fontSize: fs(10),
+    fontSize: fs(11),
+    fontWeight: '800',
+  },
+  passingText: {
+    fontSize: fs(11),
+    color: AppColors.placeholder,
+  },
+  answersBox: {
+    flex: 1.5,
+  },
+  answerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: hp(2),
+  },
+  answerText: {
+    fontSize: fs(12),
+    color: AppColors.textDark,
+    fontWeight: '500',
+  },
+  attemptBox: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  attemptValue: {
+    fontSize: fs(14),
+    fontWeight: '600',
+    color: AppColors.textDark,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: hp(10),
+  },
+  dateBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateText: {
+    fontSize: fs(12),
+    color: AppColors.textSecondary,
+  },
+  certificateBtn: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(6),
+    borderRadius: ms(8),
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  certificateBtnText: {
+    fontSize: fs(12),
     fontWeight: '700',
+    color: AppColors.primary,
   },
   centerBox: {
     flex: 1,

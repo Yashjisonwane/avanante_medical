@@ -50,7 +50,6 @@
     "email_label": "ईमेल या कर्मचारी आईडी",
     "email_placeholder": "name@avantemed.com",
     "password_label": "पासवर्ड",
-    "stay_logged_in": "इस डिवाइस पर लॉग इन रहें",
     "or": "या",
     "new_employee": "नया कर्मचारी?",
     "onboarding_button": "कर्मचारी ऑनबोर्डिंग पूरी करें",
@@ -179,6 +178,7 @@
     "home": "होम",
     "levels": "मेरे स्तर",
     "analytics": "एनालिटिक्स",
+    "assessment": "मूल्यांकन",
     "profile": "प्रोफ़ाइल"
   },
   "profile": {

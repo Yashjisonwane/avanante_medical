@@ -17,6 +17,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors, Spacing } from '../../../constants/Theme';
 import { fetchLevelProgress, getHierarchyThunk } from '../../../redux/slices/courseSlice';
+import { formatImageUrl } from '../../../utils/imageUtils';
 
 const LevelCard = ({ 
   image, title, stats, progress, status, buttonText, 
@@ -33,7 +34,7 @@ const LevelCard = ({
     >
       <View style={styles.imageContainer}>
         <Image 
-          source={typeof image === 'string' ? { uri: image } : image} 
+          source={formatImageUrl(image)} 
           style={styles.levelImage} 
           resizeMode="cover" 
         />

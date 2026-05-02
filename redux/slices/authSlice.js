@@ -108,6 +108,20 @@ export const changePassword = createAsyncThunk('auth/changePassword', async (pay
   }),
 );
 
+export const fetchRoles = createAsyncThunk('auth/fetchRoles', async () =>
+  apiRequest({
+    endpoint: '/common/roles?status=all',
+    method: 'GET',
+  }),
+);
+
+export const fetchDesignations = createAsyncThunk('auth/fetchDesignations', async () =>
+  apiRequest({
+    endpoint: '/common/designations?status=all',
+    method: 'GET',
+  }),
+);
+
 export const logoutUser = createAsyncThunk('auth/logoutUser', async (_, { dispatch }) => {
   try {
     await apiRequest({
@@ -139,6 +153,8 @@ const initialState = {
   },
   successMessage: '',
   errorMessage: '',
+  roles: [],
+  designations: [],
 };
 
 const authSlice = createSlice({
@@ -284,6 +300,12 @@ const authSlice = createSlice({
       .addCase(changePassword.rejected, (state, action) => {
         state.actionLoading.changePassword = false;
         state.errorMessage = action.error.message || 'Unable to change password.';
+      })
+      .addCase(fetchRoles.fulfilled, (state, action) => {
+        state.roles = action.payload?.data || action.payload || [];
+      })
+      .addCase(fetchDesignations.fulfilled, (state, action) => {
+        state.designations = action.payload?.data || action.payload || [];
       })
       .addMatcher(
         (action) => 

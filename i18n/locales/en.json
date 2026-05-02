@@ -50,7 +50,6 @@
     "email_label": "Email or Employee ID",
     "email_placeholder": "name@avantemed.com",
     "password_label": "Password",
-    "stay_logged_in": "Stay logged in on this device",
     "or": "OR",
     "new_employee": "New Employee?",
     "onboarding_button": "Complete Employee Onboarding",
@@ -179,6 +178,7 @@
     "home": "Home",
     "levels": "My Levels",
     "analytics": "Analytics",
+    "assessment": "Assessment",
     "profile": "Profile"
   },
   "profile": {

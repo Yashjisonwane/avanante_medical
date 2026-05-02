@@ -17,6 +17,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
 import { fetchModuleProgress } from '../../../redux/slices/courseSlice';
+import { formatImageUrl } from '../../../utils/imageUtils';
 
 const ChapterItem = ({ chapterData, isCurrent }) => {
   const router = useRouter();
@@ -181,7 +182,7 @@ export default function ModuleDetailsScreen() {
         {/* Banner Section */}
         <View style={styles.bannerContainer}>
           <ImageBackground 
-            source={currentModule?.thumbnail ? { uri: currentModule.thumbnail } : require('../../../assets/subtitle-1.png')} 
+            source={formatImageUrl(currentModule?.thumbnail) || require('../../../assets/subtitle-1.png')} 
             style={styles.banner}
             imageStyle={styles.bannerImage}
           >

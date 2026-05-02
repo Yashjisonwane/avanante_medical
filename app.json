@@ -22,7 +22,11 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.mr.vishal_m.avanatemedical"
+      "package": "com.avante.salestraining"
+    },
+    "ios": {
+      "bundleIdentifier": "com.avante.salestraining",
+      "supportsTablet": true
     },
     "web": {
       "favicon": "./assets/favicon.png"

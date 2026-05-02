@@ -17,16 +17,19 @@ import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
 import { fetchChapterProgress } from '../../../redux/slices/courseSlice';
+import { formatImageUrl } from '../../../utils/imageUtils';
 
 const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) => {
   const router = useRouter();
   const { t } = useTranslation();
-  
+
   const isUnlocked = topicData.is_unlocked == true || topicData.is_unlocked == 1 || topicData.is_unlocked == 'true' || topicData.is_unlocked == '1' || topicData.isUnlocked == true || topicData.isUnlocked == 1;
   const isCompleted = topicData.is_completed == true || topicData.is_completed == 1 || topicData.is_completed == 'true';
+  const hasQuiz = !!(topicData.assessment || topicData.assessment_id || topicData.quiz_id || (topicData.quiz && typeof topicData.quiz === 'object'));
 
   const handlePress = () => {
     if (!isUnlocked) return;
+    if (isCompleted && hasQuiz) return;
     router.push({
       pathname: '/(tabs)/levels/topic-details',
       params: { id: topicData.id }
@@ -44,7 +47,7 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
   // Show Give Quiz button when all topic content is read OR topic is completed
   const isContentCompleted = topicData.is_content_completed == true || topicData.is_content_completed == 'true' || topicData.is_content_completed == 1;
   const isTopicCompleted = topicData.is_completed == true || topicData.is_completed == 'true' || topicData.is_completed == 1;
-  
+
   // If content is completed, we show the quiz button (the handler will fallback to topic ID if no specific quiz ID exists)
   const showQuizBtn = (isContentCompleted || isTopicCompleted);
 
@@ -56,9 +59,9 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
-        styles.topicCard, 
+        styles.topicCard,
         isCurrent && styles.topicCardCurrent,
       ]}
       onPress={handlePress}
@@ -93,14 +96,14 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
           <Text style={styles.topicTitle} numberOfLines={2}>{topicData.title}</Text>
         </View>
       </View>
-      
+
       {isUnlocked && (
         <View style={styles.actionButtonsRow}>
           <TouchableOpacity style={styles.actionButtonFAQ} onPress={handleFAQPress}>
             <Ionicons name="help-circle-outline" size={ms(12)} color="#F97316" style={{ marginRight: wp(4) }} />
             <Text style={styles.actionButtonFAQText}>{t('levels.faq', 'FAQ')}</Text>
           </TouchableOpacity>
-          
+
           {showQuizBtn && (
             <TouchableOpacity style={styles.actionButtonQuiz} onPress={handleQuizPress}>
               <Ionicons name="help-circle" size={ms(12)} color="#fff" style={{ marginRight: wp(4) }} />
@@ -108,8 +111,17 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.actionButtonStart} onPress={handlePress}>
-            <Text style={styles.actionButtonStartText}>{t('levels.start_topic', 'Start Topic')}</Text>
+          <TouchableOpacity
+            style={[
+              styles.actionButtonStart,
+              (isCompleted && hasQuiz) && { backgroundColor: '#10B981' }
+            ]}
+            onPress={handlePress}
+            disabled={isCompleted && hasQuiz}
+          >
+            <Text style={styles.actionButtonStartText}>
+              {(isCompleted && hasQuiz) ? t('common.completed', 'Completed') : t('levels.start_topic', 'Start Topic')}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -132,11 +144,11 @@ export default function ChapterDetailsScreen() {
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  
+
   const { currentChapter, currentTopics, loading } = useSelector((state) => state.course);
   const [totalDuration, setTotalDuration] = useState(0);
   const [completedTopics, setCompletedTopics] = useState(0);
-  
+
   const topics = currentTopics || [];
   const chapterTitle = currentChapter?.title || `Chapter ${id}`;
   const chapterDesc = currentChapter?.description || 'Chapter description';
@@ -152,12 +164,12 @@ export default function ChapterDetailsScreen() {
     if (currentChapter && currentChapter.topics) {
       let duration = 0;
       let completedCount = 0;
-      
+
       currentChapter.topics.forEach(topic => {
         if (topic.is_completed == true || topic.is_completed == 1) completedCount++;
         duration += (topic.estimated_duration || 0);
       });
-      
+
       setTotalDuration(duration);
       setCompletedTopics(completedCount);
     }
@@ -165,7 +177,7 @@ export default function ChapterDetailsScreen() {
 
   const totalTopicsCount = topics.length;
   const progressPercent = totalTopicsCount > 0 ? Math.round((completedTopics / totalTopicsCount) * 100) : 0;
-  
+
   // Find first unlocked topic that is not completed
   const currentTopicIndex = topics.findIndex(t => {
     const isUnlocked = t.is_unlocked == true || t.is_unlocked == 1 || t.is_unlocked == 'true' || t.is_unlocked == '1' || t.isUnlocked == true || t.isUnlocked == 1;
@@ -186,11 +198,11 @@ export default function ChapterDetailsScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + hp(20), paddingBottom: nextTopicToPlay ? hp(120) : hp(40) }]} showsVerticalScrollIndicator={false}>
-        
+
         {/* Header Section */}
         <View style={styles.headerRow}>
-          <TouchableOpacity 
-            style={styles.backButtonCircle} 
+          <TouchableOpacity
+            style={styles.backButtonCircle}
             onPress={() => router.back()}
           >
             <Ionicons name="arrow-back" size={ms(22)} color="#1E293B" />
@@ -203,8 +215,8 @@ export default function ChapterDetailsScreen() {
 
         {/* Banner Section */}
         <View style={styles.bannerContainer}>
-          <ImageBackground 
-            source={currentChapter?.thumbnail ? { uri: currentChapter.thumbnail } : require('../../../assets/topic-details-2.png')} 
+          <ImageBackground
+            source={formatImageUrl(currentChapter?.thumbnail) || require('../../../assets/topic-details-2.png')}
             style={styles.banner}
             imageStyle={styles.bannerImage}
           >
@@ -244,7 +256,7 @@ export default function ChapterDetailsScreen() {
               <Text style={styles.progressSubtext}>{completedTopics} {t('levels.of', 'of')} {totalTopicsCount} {t('levels.topics_completed', 'topics completed')}</Text>
             </View>
           </View>
-          
+
           <View style={styles.statsRow}>
             <View style={[styles.statCardHalf, { borderLeftColor: '#9333EA' }]}>
               <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>{t('levels.completed', 'COMPLETED')}</Text>
@@ -287,7 +299,7 @@ export default function ChapterDetailsScreen() {
         {/* Topics List */}
         <View style={styles.topicsList}>
           {topics.map((item, index) => (
-            <TopicItem 
+            <TopicItem
               key={item.id}
               topicData={item}
               isCurrent={index === currentTopicIndex || (currentTopicIndex === -1 && index === 0)}
@@ -306,7 +318,7 @@ export default function ChapterDetailsScreen() {
             <Text style={styles.footerSubtitle}>{t('levels.chapter_completed', 'Chapter Completed')}</Text>
           </View>
           {assessmentId ? (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.continueBtn, { backgroundColor: '#7C3AED' }]}
               onPress={() => {
                 router.push({
@@ -319,7 +331,7 @@ export default function ChapterDetailsScreen() {
               <Ionicons name="help-circle" size={ms(16)} color="#fff" />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.continueBtn}
               onPress={() => router.back()}
             >
@@ -334,7 +346,7 @@ export default function ChapterDetailsScreen() {
             <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
             <Text style={styles.footerSubtitle}>{t('common.next', 'Next')}: {nextTopicToPlay.title}</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.continueBtn}
             onPress={() => {
               router.push({

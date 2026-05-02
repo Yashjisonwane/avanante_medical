@@ -6,213 +6,298 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
+import { wp, hp, ms, fs } from '../../utils/responsive';
 import CustomInput from '../../components/CustomInput';
-import CustomButton from '../../components/CustomButton';
-import { clearAuthMessages, verifyEmail } from '../../redux/slices/authSlice';
+import { verifyEmail, clearAuthMessages } from '../../redux/slices/authSlice';
 
 export default function VerifyEmailScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { token: tokenFromParams = '' } = useLocalSearchParams();
   const dispatch = useDispatch();
-  const { actionLoading, errorMessage } = useSelector((state) => state.auth);
-  const [token, setToken] = useState(String(tokenFromParams || ''));
+  const { email = 'your registered email' } = useLocalSearchParams();
+  const { actionLoading } = useSelector((state) => state.auth);
+  const [token, setToken] = useState('');
 
-  const handleVerifyEmail = async () => {
-    const finalToken = token.trim();
-    if (!finalToken) {
-      Alert.alert('Missing token', 'Please enter the verification token received in your email.');
+  const handleVerify = async () => {
+    if (!token.trim()) {
+      Alert.alert('Missing Token', 'Please enter the verification token received in your email.');
       return;
     }
 
-    const action = await dispatch(verifyEmail(finalToken));
-
+    const action = await dispatch(verifyEmail(token.trim()));
     if (verifyEmail.fulfilled.match(action)) {
       dispatch(clearAuthMessages());
       Alert.alert('Success', 'Email verified successfully. You can now login.', [
         { text: 'Login Now', onPress: () => router.replace('/(auth)/login') },
       ]);
-      return;
+    } else {
+      Alert.alert('Verification Failed', action.error?.message || 'Invalid token. Please try again.');
     }
-
-    Alert.alert('Verification failed', action.error?.message || 'Unable to verify email.');
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.languageSelector}>
-              <Text style={styles.languageText}>Language: </Text>
-              <Text style={styles.languageValue}>English</Text>
-              <Text style={styles.dropdownIcon}> ▾</Text>
-            </TouchableOpacity>
+        {/* Logo Section */}
+        <View style={styles.logoSection}>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* Verification Card */}
+        <View style={styles.card}>
+          <View style={styles.iconCircle}>
+            <Ionicons name="mail-open-outline" size={ms(44)} color="#10B981" />
           </View>
 
-          {/* Logo Section */}
-          <View style={styles.logoSection}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+          <Text style={styles.cardTitle}>Verify Your Email</Text>
+          <View style={styles.titleUnderline} />
+
+          <Text style={styles.description}>
+            We've sent a verification token to your email address:
+          </Text>
+
+          <View style={styles.emailPill}>
+            <Ionicons name="mail-outline" size={ms(18)} color="#00BFA5" />
+            <Text style={styles.emailText}>{email}</Text>
           </View>
 
-          {/* Form */}
-          <View style={styles.form}>
-            <Text style={styles.pageTitle}>Verify Email</Text>
-            <Text style={styles.description}>
-              Please enter the verification token sent to your registered email address.
+          <View style={styles.statusBox}>
+            <View style={styles.statusHeader}>
+              <Ionicons name="checkmark-circle-outline" size={ms(18)} color="#2563EB" />
+              <Text style={styles.statusTitle}>Token Sent Successfully!</Text>
+            </View>
+            <Text style={styles.statusDescription}>
+              Please enter the 6-digit token below to activate your account.
             </Text>
+          </View>
 
+          {/* Token Input */}
+          <View style={styles.inputSection}>
             <CustomInput
               label="Verification Token"
               placeholder="Enter token from email"
               value={token}
               onChangeText={setToken}
+              keyboardType="number-pad"
+              leftIcon="key-outline"
+              required
             />
+          </View>
 
-            <CustomButton
-              title={actionLoading.verifyEmail ? 'Verifying...' : 'Verify Email'}
-              onPress={handleVerifyEmail}
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity 
+              style={[styles.verifyBtn, actionLoading.verifyEmail && { opacity: 0.7 }]}
+              onPress={handleVerify}
               disabled={actionLoading.verifyEmail}
-            />
-            {Boolean(errorMessage) && <Text style={styles.errorText}>{errorMessage}</Text>}
+            >
+              {actionLoading.verifyEmail ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.verifyBtnText}>Verify & Proceed</Text>
+              )}
+            </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.backToLogin}
+              style={styles.loginBtn}
               onPress={() => router.replace('/(auth)/login')}
             >
-              <Text style={styles.backToLoginText}>Back to Login</Text>
+              <Text style={styles.loginBtnText}>Go to Login</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <View style={styles.footerLinks}>
-              <TouchableOpacity><Text style={styles.footerLink}>Terms of Service</Text></TouchableOpacity>
-              <Text style={styles.footerLinkDivider}>  /  </Text>
-              <TouchableOpacity><Text style={styles.footerLink}>Privacy Policy</Text></TouchableOpacity>
-            </View>
-          </View>
+          <TouchableOpacity 
+            style={styles.backBtn}
+            onPress={() => router.replace('/(auth)/onboarding')}
+          >
+            <Ionicons name="arrow-back" size={ms(16)} color="#64748B" />
+            <Text style={styles.backBtnText}>Back to Registration</Text>
+          </TouchableOpacity>
+        </View>
 
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Didn't receive email? Check your spam folder</Text>
+          <Text style={styles.copyrightText}>
+            © 2025 Avante Medical LMS • v2.1.0
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 30,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 20,
-    marginTop: 15,
-  },
-  languageSelector: {
-    flexDirection: 'row',
+    paddingHorizontal: wp(20),
+    paddingTop: hp(20),
+    paddingBottom: hp(20),
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-  },
-  languageText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  languageValue: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '600',
-  },
-  dropdownIcon: {
-    fontSize: 12,
-    color: '#999',
   },
   logoSection: {
-    alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: hp(25),
+    marginTop: hp(10),
   },
   logo: {
-    width: 220,
-    height: 60,
-    marginBottom: 10,
+    width: wp(220),
+    height: hp(55),
   },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 10,
-    textAlign: 'center',
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: ms(20),
+    width: '100%',
+    padding: wp(25),
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  iconCircle: {
+    width: ms(80),
+    height: ms(80),
+    borderRadius: ms(40),
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: hp(15),
+  },
+  cardTitle: {
+    fontSize: fs(24),
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: hp(8),
+  },
+  titleUnderline: {
+    width: wp(40),
+    height: hp(4),
+    backgroundColor: '#00BFA5',
+    borderRadius: 2,
+    marginBottom: hp(20),
   },
   description: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: fs(15),
+    color: '#64748B',
     textAlign: 'center',
-    marginBottom: 25,
-    lineHeight: 20,
-    paddingHorizontal: 10,
+    marginBottom: hp(12),
+    lineHeight: fs(22),
   },
-  form: {
-    width: '100%',
-    marginTop: 10,
-  },
-  backToLogin: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  backToLoginText: {
-    color: '#24458B',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  footer: {
-    marginTop: 'auto',
-    paddingTop: 40,
-    alignItems: 'center',
-  },
-  footerLinks: {
+  emailPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F0FDFA',
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(8),
+    borderRadius: ms(8),
+    gap: wp(8),
+    marginBottom: hp(20),
   },
-  footerLink: {
-    fontSize: 13,
-    color: '#777',
-    fontWeight: '400',
+  emailText: {
+    fontSize: fs(15),
+    color: '#00BFA5',
+    fontWeight: '700',
   },
-  footerLinkDivider: {
-    color: '#ddd',
+  statusBox: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: ms(12),
+    width: '100%',
+    padding: wp(16),
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    marginBottom: hp(20),
   },
-  errorText: {
-    color: '#d32f2f',
-    fontSize: 13,
-    marginTop: 6,
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(8),
+    marginBottom: hp(6),
+    justifyContent: 'center',
+  },
+  statusTitle: {
+    fontSize: fs(15),
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  statusDescription: {
+    fontSize: fs(13),
+    color: '#475569',
+    textAlign: 'center',
+    lineHeight: fs(19),
+  },
+  inputSection: {
+    width: '100%',
+    marginBottom: hp(10),
+  },
+  buttonGroup: {
+    width: '100%',
+    gap: hp(12),
+    marginBottom: hp(20),
+  },
+  verifyBtn: {
+    backgroundColor: '#00BFA5',
+    height: hp(55),
+    borderRadius: ms(12),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  verifyBtnText: {
+    color: '#FFFFFF',
+    fontSize: fs(16),
+    fontWeight: '700',
+  },
+  loginBtn: {
+    backgroundColor: '#F8FAFC',
+    height: hp(55),
+    borderRadius: ms(12),
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  loginBtnText: {
+    color: '#64748B',
+    fontSize: fs(16),
+    fontWeight: '700',
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(6),
+  },
+  backBtnText: {
+    color: '#64748B',
+    fontSize: fs(14),
+    fontWeight: '600',
+  },
+  footer: {
+    marginTop: hp(20),
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: fs(12),
+    color: '#64748B',
+    marginBottom: hp(4),
+  },
+  copyrightText: {
+    fontSize: fs(11),
+    color: '#94A3B8',
     textAlign: 'center',
   },
 });

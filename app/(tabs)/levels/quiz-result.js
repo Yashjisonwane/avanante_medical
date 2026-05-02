@@ -12,15 +12,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
-import { submitAssessmentFeedback } from '../../../redux/slices/courseSlice';
+import { submitAssessmentFeedback, resetAssessment } from '../../../redux/slices/courseSlice';
 
 export default function QuizResultScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams();
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -85,6 +86,17 @@ export default function QuizResultScreen() {
     const mins = Math.floor(timeTakenSec / 60);
     const secs = Math.round(timeTakenSec % 60);
     return `${mins}m ${secs}s`;
+  };
+
+  const getRatingLabel = (val) => {
+    switch (val) {
+      case 5: return 'Excellent';
+      case 4: return 'Very Good';
+      case 3: return 'Good';
+      case 2: return 'Fair';
+      case 1: return 'Poor';
+      default: return '';
+    }
   };
 
   return (
@@ -170,34 +182,57 @@ export default function QuizResultScreen() {
         </View>
 
         {/* Feedback Section */}
-        <View style={styles.feedbackCard}>
-            <View style={styles.cardHeader}>
-               <Ionicons name="chatbubble-ellipses-outline" size={ms(18)} color="#1E293B" />
-               <Text style={styles.cardTitle}>{t('exam.share_experience', 'Share Your Experience')}</Text>
-            </View>
-
-           {feedbackSubmitted ? (
-             <View style={styles.thanksContainer}>
-                 <View style={styles.thanksIconCircle}>
-                    <Ionicons name="heart" size={ms(30)} color="#EF4444" />
-                 </View>
-                 <Text style={styles.thanksTitle}>{t('common.thank_you', 'Thank you!')}</Text>
-                 <Text style={styles.thanksMessage}>{t('exam.feedback_thanks', 'Your feedback helps us improve.')}</Text>
+        <View style={[styles.feedbackCard, feedbackSubmitted && styles.feedbackCardSubmitted]}>
+            {!feedbackSubmitted && (
+              <View style={styles.cardHeader}>
+                 <Ionicons name="chatbubble-ellipses-outline" size={ms(18)} color="#1E293B" />
+                 <Text style={styles.cardTitle}>{t('exam.share_experience', 'Share Your Experience')}</Text>
               </View>
+            )}
+
+            {feedbackSubmitted ? (
+              <View style={styles.thanksContainer}>
+                  <View style={styles.thanksIconCircle}>
+                     <Ionicons name="checkmark" size={ms(32)} color="#fff" />
+                  </View>
+                  <Text style={styles.thanksTitle}>Thank You for Your Feedback!</Text>
+                  <Text style={styles.thanksMessage}>Your input helps us improve and create better learning experiences.</Text>
+                  
+                  <View style={styles.thanksStarsRow}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                       <Ionicons 
+                         key={s}
+                         name={s <= rating ? "star" : "star-outline"} 
+                         size={ms(20)} 
+                         color="#F59E0B" 
+                         style={{ marginHorizontal: 2 }}
+                       />
+                    ))}
+                  </View>
+
+                  <Text style={styles.redirectText}>Redirecting to dashboard in a moment...</Text>
+               </View>
             ) : (
               <View style={styles.feedbackForm}>
                  <Text style={styles.feedbackLabel}>{t('exam.rate_quiz', 'How would you rate this quiz?')}</Text>
-                 <View style={styles.starsRow}>
-                   {[1, 2, 3, 4, 5].map((s) => (
-                     <TouchableOpacity key={s} onPress={() => setRating(s)}>
-                        <Ionicons 
-                          name={s <= rating ? "star" : "star-outline"} 
-                          size={ms(30)} 
-                          color={s <= rating ? "#F59E0B" : "#CBD5E1"} 
-                        />
-                     </TouchableOpacity>
-                   ))}
-                </View>
+                  <View style={styles.starsContainer}>
+                    <View style={styles.starsRow}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <TouchableOpacity key={s} onPress={() => setRating(s)}>
+                           <Ionicons 
+                             name={s <= rating ? "star" : "star-outline"} 
+                             size={ms(30)} 
+                             color={s <= rating ? "#F59E0B" : "#CBD5E1"} 
+                           />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    {rating > 0 && (
+                      <View style={styles.ratingBadge}>
+                        <Text style={styles.ratingBadgeText}>{getRatingLabel(rating)}</Text>
+                      </View>
+                    )}
+                  </View>
 
                  <TextInput
                    style={styles.commentInput}
@@ -233,7 +268,13 @@ export default function QuizResultScreen() {
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, hp(15)) }]}>
             <TouchableOpacity 
               style={styles.homeBtn}
-              onPress={() => router.replace('/(tabs)/home')}
+              onPress={() => {
+                dispatch(resetAssessment());
+                if (navigation.canGoBack()) {
+                  navigation.popToTop();
+                }
+                router.replace('/(tabs)/home');
+              }}
             >
                <Text style={styles.homeBtnText}>{t('common.back_to_home', 'Back to Home')}</Text>
             </TouchableOpacity>
@@ -411,6 +452,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 10,
     elevation: 2,
+    overflow: 'hidden',
+  },
+  feedbackCardSubmitted: {
+    backgroundColor: '#E1F8ED',
+    borderColor: '#A7F3D0',
+    padding: 0,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -435,11 +482,28 @@ const styles = StyleSheet.create({
     color: '#475569',
     marginBottom: hp(15),
   },
+  starsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: hp(25),
+    gap: wp(15),
+  },
   starsRow: {
     flexDirection: 'row',
-    gap: wp(12),
-    marginBottom: hp(25),
-    justifyContent: 'center',
+    gap: wp(8),
+  },
+  ratingBadge: {
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(4),
+    borderRadius: ms(20),
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  ratingBadgeText: {
+    fontSize: fs(12),
+    fontWeight: '700',
+    color: '#D97706',
   },
   commentInput: {
     backgroundColor: '#F8FAFC',
@@ -468,28 +532,46 @@ const styles = StyleSheet.create({
   },
   thanksContainer: {
     alignItems: 'center',
-    paddingVertical: hp(25),
+    paddingVertical: hp(40),
+    paddingHorizontal: wp(20),
   },
   thanksIconCircle: {
-    width: ms(70),
-    height: ms(70),
-    borderRadius: ms(35),
-    backgroundColor: '#FEF2F2',
+    width: ms(60),
+    height: ms(60),
+    borderRadius: ms(18),
+    backgroundColor: '#10B981',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: hp(15),
+    marginBottom: hp(20),
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   thanksTitle: {
-    fontSize: fs(20),
+    fontSize: fs(22),
     fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: hp(8),
+    color: '#064E3B',
+    marginBottom: hp(12),
+    textAlign: 'center',
   },
   thanksMessage: {
-    fontSize: fs(15),
-    color: '#64748B',
+    fontSize: fs(14),
+    color: '#065F46',
     textAlign: 'center',
-    lineHeight: fs(22),
+    lineHeight: fs(20),
+    marginBottom: hp(20),
+    fontWeight: '500',
+  },
+  thanksStarsRow: {
+    flexDirection: 'row',
+    marginBottom: hp(15),
+  },
+  redirectText: {
+    fontSize: fs(12),
+    color: '#059669',
+    fontWeight: '600',
   },
   bottomActions: {
     position: 'absolute',
