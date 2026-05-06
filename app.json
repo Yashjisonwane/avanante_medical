@@ -38,6 +38,16 @@
               "scheme": "https",
               "host": "lms-backend.netswaptech.com",
               "pathPrefix": "/api/v1/trainee/reset-password"
+            },
+            {
+              "scheme": "https",
+              "host": "avanta-sales.vercel.app",
+              "pathPrefix": "/verify-email"
+            },
+            {
+              "scheme": "https",
+              "host": "avanta-sales.vercel.app",
+              "pathPrefix": "/reset-password"
             }
           ],
           "category": [
@@ -49,7 +59,11 @@
     },
     "ios": {
       "bundleIdentifier": "com.avante.salestraining",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "associatedDomains": [
+        "applinks:lms-backend.netswaptech.com",
+        "applinks:avanta-sales.vercel.app"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
