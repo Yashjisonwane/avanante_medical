@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { hp, wp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
@@ -32,14 +32,14 @@ export default function AssessmentScreen() {
     try {
       // type can be 'topic' for Quiz or 'level' for Exam
       const response = await apiRequest({
-        endpoint: `/trainee/reports/assessment-report?page=1&per_page=10&type=${type}&lang=${i18n.language}`,
+        endpoint: `/trainee/reports/assessment-report?page=1&per_page=100&type=${type}&lang=${i18n.language}`,
         method: 'GET',
       });
       
       // Data extraction logic:
-      // The API structure is usually response.data.data
-      const responseData = response?.data?.data || response?.data || [];
-      setData(Array.isArray(responseData) ? responseData : []);
+      // The API structure is usually response.data.data or response.data
+      const responseData = response?.data?.data || response?.data || response || [];
+      setData(Array.isArray(responseData) ? responseData : (responseData?.data && Array.isArray(responseData.data) ? responseData.data : []));
     } catch (err) {
       console.error('Error fetching assessments:', err);
       setError(String(err?.message || 'Failed to fetch assessments'));
@@ -48,9 +48,11 @@ export default function AssessmentScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchReports(activeTab === 'quiz' ? 'topic' : 'level');
-  }, [activeTab]);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchReports(activeTab === 'quiz' ? 'topic' : 'level');
+    }, [activeTab, i18n.language])
+  );
 
   const renderItem = ({ item }) => {
     if (!item) return null;
@@ -155,7 +157,7 @@ export default function AssessmentScreen() {
               style={styles.certificateBtn}
               onPress={() => router.push({
                 pathname: '/analytics/certificate',
-                params: { assessmentId: assessment?.id }
+                params: { assessmentId: item?.passed_attempt_id || item?.id }
               })}
             >
               <Text style={styles.certificateBtnText}>{t('assessment.view_certificate', { defaultValue: 'View Certificate' })}</Text>

@@ -20,6 +20,8 @@ import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import i18n from '../../i18n';
 import { clearAuthMessages, loginUser } from '../../redux/slices/authSlice';
+import * as Device from 'expo-device';
+import { registerForPushNotificationsAsync } from '../../utils/notificationHelper';
 
 const LANGUAGES = [
   { code: 'en', label: 'English', nativeLabel: 'English' },
@@ -53,12 +55,26 @@ export default function LoginScreen() {
     }
 
     try {
-      const action = await dispatch(
-        loginUser({
-          email: trimmedEmail,
-          password,
-        }),
-      );
+      // Fetch FCM Token and Device Info
+      let fcmToken = null;
+      try {
+        fcmToken = await registerForPushNotificationsAsync();
+      } catch (tokenErr) {
+        console.warn('FCM Token error:', tokenErr.message);
+      }
+
+      const loginPayload = {
+        email: trimmedEmail,
+        password,
+        fcm_token: fcmToken || 'NO_TOKEN_AVAILABLE',
+        device_type: Platform.OS, // 'android' or 'ios'
+      };
+
+      console.log('--- LOGIN PAYLOAD (DOCS VERSION) ---');
+      console.log(JSON.stringify(loginPayload, null, 2));
+      console.log('------------------------------------');
+
+      const action = await dispatch(loginUser(loginPayload));
 
       if (loginUser.fulfilled.match(action)) {
         dispatch(clearAuthMessages());

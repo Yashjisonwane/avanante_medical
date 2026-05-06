@@ -557,7 +557,7 @@ export default function ExamScreen() {
 
             <View style={styles.rightNavs}>
               <TouchableOpacity style={styles.navBtnSkip} onPress={handleSkip}>
-                <MaterialCommunityIcons name="skip-next-outline" size={ms(18)} color="#475569" style={{marginRight: 4}} />
+                <Ionicons name="play-skip-forward-outline" size={ms(18)} color="#64748B" style={{marginRight: 4}} />
                 <Text style={styles.navBtnSkipText}>{t('exam.skip', 'Skip')}</Text>
               </TouchableOpacity>
 

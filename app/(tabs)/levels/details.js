@@ -9,15 +9,17 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
-import { fetchLevelProgress } from '../../../redux/slices/courseSlice';
+import { fetchLevelProgress, getHierarchyThunk } from '../../../redux/slices/courseSlice';
 import { formatImageUrl } from '../../../utils/imageUtils';
+import { Image } from 'react-native';
 
 const ModuleItem = ({ moduleData, isCurrent }) => {
   const router = useRouter();
@@ -46,26 +48,44 @@ const ModuleItem = ({ moduleData, isCurrent }) => {
     });
   };
 
+  const handleFAQPress = () => {
+    router.push({
+      pathname: '/(tabs)/levels/faq',
+      params: { id: moduleData.id, type: 'module' }
+    });
+  };
+
   return (
-    <TouchableOpacity 
-      style={[
-        styles.moduleCard, 
-        isCurrent && styles.moduleCardCurrent,
-      ]}
-      onPress={handlePress}
-      activeOpacity={isUnlocked ? 0.9 : 1}
-    >
-      <View style={styles.moduleIconContainer}>
-        {isUnlocked ? (
-          <Ionicons name="play" size={ms(24)} color="#2563EB" />
+    <View style={[
+      styles.moduleCard, 
+      isCurrent && styles.moduleCardCurrent,
+      !isUnlocked && styles.moduleCardLocked
+    ]}>
+      <TouchableOpacity 
+        style={[styles.moduleIconContainer, !isUnlocked && styles.moduleIconContainerLocked]}
+        onPress={handlePress}
+        disabled={!isUnlocked}
+        activeOpacity={0.8}
+      >
+        {moduleData.thumbnail ? (
+          <Image source={formatImageUrl(moduleData.thumbnail)} style={styles.moduleThumbnail} />
         ) : (
-          <Ionicons name="lock-closed" size={ms(20)} color="#94A3B8" />
+          isUnlocked ? (
+            <Ionicons name="play" size={ms(24)} color="#2563EB" />
+          ) : (
+            <Ionicons name="lock-closed" size={ms(20)} color="#94A3B8" />
+          )
         )}
-      </View>
+      </TouchableOpacity>
       <View style={styles.moduleDetails}>
         <View style={styles.moduleHeaderRow}>
           <Text style={styles.moduleMeta}>{t('modules.module_number', { number: moduleData.id })}</Text>
-          {isCurrent && !isCompleted ? (
+          {isCompleted ? (
+            <View style={styles.badgeCompleted}>
+              <Ionicons name="checkmark-circle" size={ms(10)} color="#10B981" />
+              <Text style={styles.badgeCompletedText}>{t('common.completed', 'Completed')}</Text>
+            </View>
+          ) : isCurrent ? (
             <View style={styles.badgeCurrent}>
               <Text style={styles.badgeCurrentText}>{t('common.current', 'Current')}</Text>
             </View>
@@ -76,21 +96,44 @@ const ModuleItem = ({ moduleData, isCurrent }) => {
             </View>
           ) : null}
         </View>
-        <Text style={styles.moduleTitle} numberOfLines={1}>{moduleData.title}</Text>
+        <Text style={[styles.moduleTitle, !isUnlocked && { color: '#94A3B8' }]} numberOfLines={1}>{moduleData.title}</Text>
         <Text style={styles.moduleDesc} numberOfLines={1}>{moduleData.description || `${moduleData.title} description`}</Text>
         <Text style={styles.moduleCounts}>{chaptersCount} {t('levels.chapters', 'chapters')} • {topicsCount} {t('levels.topics', 'topics')}</Text>
       </View>
       
-      {isUnlocked ? (
-        <TouchableOpacity style={styles.actionButtonStart} onPress={handlePress}>
-          <Text style={styles.actionButtonStartText}>{t('common.start', 'Start')}</Text>
+      <View style={styles.moduleActionsColumn}>
+        <TouchableOpacity 
+          style={[styles.faqSmallButton, !isUnlocked && styles.faqSmallButtonLocked]} 
+          onPress={handleFAQPress}
+          disabled={!isUnlocked}
+        >
+          <Ionicons 
+            name="help-circle" 
+            size={ms(14)} 
+            color={!isUnlocked ? '#94A3B8' : '#F59E0B'} 
+          />
+          <Text style={[styles.faqSmallButtonText, !isUnlocked && { color: '#94A3B8' }]}>FAQ</Text>
         </TouchableOpacity>
-      ) : (
-        <View style={styles.actionButtonLocked}>
-          <Text style={styles.actionButtonLockedText}>{t('common.locked', 'Locked')}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
+
+        {isUnlocked ? (
+          <TouchableOpacity 
+            style={[
+              styles.actionButtonStart,
+              isCompleted && { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' }
+            ]} 
+            onPress={handlePress}
+          >
+            <Text style={[styles.actionButtonStartText, isCompleted && { color: '#2563EB' }]}>
+              {isCompleted ? t('common.view', 'View') : t('levels.continue', 'Continue')}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.actionButtonLocked}>
+            <Text style={styles.actionButtonLockedText}>{t('common.locked', 'Locked')}</Text>
+          </View>
+        )}
+      </View>
+    </View>
   );
 };
 
@@ -103,26 +146,29 @@ export default function LevelDetailsScreen() {
   
   const { currentLevel, currentModules, loading } = useSelector((state) => state.course);
   const [totalDuration, setTotalDuration] = useState(0);
-  const [completedModules, setCompletedModules] = useState(0);
-  
   const modules = currentModules || [];
   const levelTitle = currentLevel?.title || t('levels.title_f1');
   const levelDesc = currentLevel?.description || 'Basic pacemaker understanding';
+  const assessmentId = currentLevel?.assessment?.id || currentLevel?.assessment_id || null;
 
-  useEffect(() => {
-    if (id) {
-      dispatch(fetchLevelProgress(id));
-    }
-  }, [dispatch, id]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (id) {
+        dispatch(fetchLevelProgress(id));
+      }
+    }, [dispatch, id])
+  );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(getHierarchyThunk());
+    }, [dispatch])
+  );
 
   useEffect(() => {
     if (currentLevel && currentLevel.modules) {
       let duration = 0;
-      let completedCount = 0;
-      
       currentLevel.modules.forEach(m => {
-        if (m.is_completed == true || m.is_completed == 1) completedCount++;
-        
         if (m.chapters) {
           m.chapters.forEach(c => {
             if (c.topics) {
@@ -133,14 +179,17 @@ export default function LevelDetailsScreen() {
           });
         }
       });
-      
       setTotalDuration(duration);
-      setCompletedModules(completedCount);
     }
   }, [currentLevel]);
 
+  // Frontend calculation for live progress
+  const completedModulesCount = modules.filter(m => 
+    m.is_completed == true || m.is_completed == 1 || m.is_completed == 'true'
+  ).length;
+
   const totalModules = modules.length;
-  const progressPercent = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
+  const progressPercent = totalModules > 0 ? Math.round((completedModulesCount / totalModules) * 100) : 0;
   
   // Find first unlocked module that is not completed
   const currentModuleIndex = modules.findIndex(m => {
@@ -179,26 +228,48 @@ export default function LevelDetailsScreen() {
 
         {/* Banner Section */}
         <View style={styles.bannerContainer}>
-          <ImageBackground 
-            source={formatImageUrl(currentLevel?.thumbnail) || require('../../../assets/level-detail-1.png')} 
-            style={styles.banner}
-            imageStyle={styles.bannerImage}
-          >
-
-            <View style={styles.bannerOverlay}>
-              <View style={styles.badgesRow}>
-                <View style={styles.badgePrimary}>
-                  <Text style={styles.badgePrimaryText}>{t('levels.level_n', { number: id })} • {totalModules} {t('levels.all_modules', 'Modules')}</Text>
+          {currentLevel?.thumbnail ? (
+            <ImageBackground 
+              source={formatImageUrl(currentLevel?.thumbnail)} 
+              style={styles.banner}
+              imageStyle={styles.bannerImage}
+            >
+              <View style={styles.bannerOverlay}>
+                <View style={styles.badgesRow}>
+                  <View style={styles.badgePrimary}>
+                    <Text style={styles.badgePrimaryText}>{t('levels.level_n', { number: id })} • {totalModules} {t('levels.all_modules', 'Modules')}</Text>
+                  </View>
+                  <View style={styles.badgeSecondary}>
+                    <Ionicons name="time-outline" size={ms(12)} color="#fff" />
+                    <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
+                  </View>
                 </View>
-                <View style={styles.badgeSecondary}>
-                  <Ionicons name="time-outline" size={ms(12)} color="#fff" />
-                  <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
-                </View>
+                <Text style={styles.bannerTitle}>{levelTitle}</Text>
+                <Text style={styles.bannerDesc}>{levelDesc}</Text>
               </View>
-              <Text style={styles.bannerTitle}>{levelTitle}</Text>
-              <Text style={styles.bannerDesc}>{levelDesc}</Text>
-            </View>
-          </ImageBackground>
+            </ImageBackground>
+          ) : (
+            <LinearGradient 
+              colors={['#0F172A', '#1E40AF', '#0D9488']} 
+              start={{ x: 0, y: 0 }} 
+              end={{ x: 1, y: 1 }} 
+              style={styles.banner}
+            >
+              <View style={[styles.bannerOverlay, { backgroundColor: 'transparent' }]}>
+                <View style={styles.badgesRow}>
+                  <View style={styles.badgePrimary}>
+                    <Text style={styles.badgePrimaryText}>{t('levels.level_n', { number: id })} • {totalModules} {t('levels.all_modules', 'Modules')}</Text>
+                  </View>
+                  <View style={styles.badgeSecondary}>
+                    <Ionicons name="time-outline" size={ms(12)} color="#fff" />
+                    <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
+                  </View>
+                </View>
+                <Text style={styles.bannerTitle}>{levelTitle}</Text>
+                <Text style={styles.bannerDesc}>{levelDesc}</Text>
+              </View>
+            </LinearGradient>
+          )}
         </View>
 
         {/* Stats Section */}
@@ -217,7 +288,7 @@ export default function LevelDetailsScreen() {
               <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: '#2563EB' }]} />
               </View>
-              <Text style={styles.progressSubtext}>{t('levels.module_complete', { completed: completedModules, total: totalModules })}</Text>
+              <Text style={styles.progressSubtext}>{t('levels.module_complete', { completed: completedModulesCount, total: totalModules })}</Text>
             </View>
           </View>
           
@@ -225,7 +296,7 @@ export default function LevelDetailsScreen() {
             <View style={[styles.statCardHalf, { borderLeftColor: '#9333EA' }]}>
               <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>{t('common.completed', 'COMPLETED')}</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statCardValueSmall}>{completedModules}/{totalModules}</Text>
+                <Text style={styles.statCardValueSmall}>{completedModulesCount}/{totalModules}</Text>
                 <Ionicons name="ribbon-outline" size={ms(18)} color="#9333EA" />
               </View>
             </View>
@@ -257,7 +328,7 @@ export default function LevelDetailsScreen() {
             <View style={styles.sectionDot} />
             <Text style={styles.sectionTitle}>{t('levels.all_modules', 'Learning Modules')}</Text>
           </View>
-          <Text style={styles.sectionSubtitle}>{t('levels.module_complete', { completed: completedModules, total: totalModules })}</Text>
+          <Text style={styles.sectionSubtitle}>{t('levels.module_complete', { completed: completedModulesCount, total: totalModules })}</Text>
         </View>
 
         {/* Modules List */}
@@ -269,11 +340,55 @@ export default function LevelDetailsScreen() {
               isCurrent={index === currentModuleIndex || (currentModuleIndex === -1 && index === 0)}
             />
           ))}
+          
+          {completedModulesCount === totalModules && totalModules > 0 && assessmentId && !(currentLevel?.is_completed || currentLevel?.is_passed) && (
+            <TouchableOpacity 
+              style={styles.completedQuizBtn}
+              onPress={() => {
+                router.push({
+                  pathname: '/(tabs)/levels/exam',
+                  params: { id: assessmentId }
+                });
+              }}
+            >
+              <Ionicons name="help-circle" size={ms(20)} color="#fff" />
+              <Text style={styles.completedQuizBtnText}>{t('levels.take_exam', 'Take Level Exam')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
       {/* Sticky Bottom Footer */}
-      {nextModuleToPlay && (
+      {completedModulesCount === totalModules && totalModules > 0 ? (
+        <View style={[styles.stickyFooter, { paddingBottom: insets.bottom > 0 ? insets.bottom + hp(15) : hp(15) }]}>
+          <View style={styles.footerTextContainer}>
+            <Text style={styles.footerTitle}>{t('levels.congratulations', 'Congratulations!')}</Text>
+            <Text style={styles.footerSubtitle}>{t('levels.level_completed', 'Level Completed')}</Text>
+          </View>
+          {assessmentId && !(currentLevel?.is_completed || currentLevel?.is_passed) ? (
+            <TouchableOpacity 
+              style={[styles.continueBtn, { backgroundColor: '#D946EF' }]}
+              onPress={() => {
+                router.push({
+                  pathname: '/(tabs)/levels/exam',
+                  params: { id: assessmentId }
+                });
+              }}
+            >
+              <Text style={styles.continueBtnText}>{t('levels.take_exam', 'Take Level Exam')}</Text>
+              <Ionicons name="help-circle" size={ms(16)} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={styles.continueBtn}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.continueBtnText}>{t('common.go_back', 'Go Back')}</Text>
+              <Ionicons name="arrow-back" size={ms(16)} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : nextModuleToPlay && (
         <View style={[styles.stickyFooter, { paddingBottom: insets.bottom > 0 ? insets.bottom + hp(15) : hp(15) }]}>
           <View style={styles.footerTextContainer}>
             <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
@@ -561,7 +676,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderRadius: ms(12),
-    padding: ms(16),
+    padding: ms(12),
     marginBottom: hp(12),
     alignItems: 'center',
     borderWidth: 1,
@@ -571,14 +686,27 @@ const styles = StyleSheet.create({
     borderColor: '#93C5FD',
     backgroundColor: '#EFF6FF',
   },
+  moduleCardLocked: {
+    backgroundColor: '#F8FAFC',
+    opacity: 0.8,
+  },
   moduleIconContainer: {
-    width: ms(48),
-    height: ms(48),
+    width: ms(54),
+    height: ms(54),
     borderRadius: ms(12),
     backgroundColor: '#DBEAFE',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: wp(16),
+    marginRight: wp(12),
+    overflow: 'hidden',
+  },
+  moduleIconContainerLocked: {
+    backgroundColor: '#F1F5F9',
+  },
+  moduleThumbnail: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   moduleDetails: {
     flex: 1,
@@ -607,6 +735,22 @@ const styles = StyleSheet.create({
     fontSize: fs(9),
     color: '#2563EB',
     fontWeight: '700',
+  },
+  badgeCompleted: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(2),
+    borderRadius: ms(4),
+    marginBottom: hp(2),
+    marginRight: wp(6),
+  },
+  badgeCompletedText: {
+    fontSize: fs(9),
+    color: '#10B981',
+    fontWeight: '700',
+    marginLeft: wp(4),
   },
   badgeLocked: {
     flexDirection: 'row',
@@ -640,28 +784,56 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   actionButtonStart: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: wp(12),
+    backgroundColor: '#10B981',
+    paddingHorizontal: wp(10),
     paddingVertical: hp(8),
     borderRadius: ms(8),
-    marginLeft: wp(8),
+    minWidth: wp(80),
+    alignItems: 'center',
   },
   actionButtonStartText: {
     color: '#FFFFFF',
-    fontSize: fs(11),
+    fontSize: fs(12),
     fontWeight: '700',
   },
   actionButtonLocked: {
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: wp(12),
+    paddingHorizontal: wp(10),
     paddingVertical: hp(8),
     borderRadius: ms(8),
-    marginLeft: wp(8),
+    minWidth: wp(80),
+    alignItems: 'center',
   },
   actionButtonLockedText: {
     color: '#64748B',
     fontSize: fs(12),
     fontWeight: '600',
+  },
+  moduleActionsColumn: {
+    gap: hp(8),
+    alignItems: 'flex-end',
+  },
+  faqSmallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(6),
+    borderRadius: ms(6),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    minWidth: wp(80),
+    justifyContent: 'center',
+  },
+  faqSmallButtonLocked: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  faqSmallButtonText: {
+    color: '#F59E0B',
+    fontSize: fs(11),
+    fontWeight: '700',
+    marginLeft: wp(4),
   },
   stickyFooter: {
     position: 'absolute',
@@ -672,42 +844,70 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(20),
     paddingVertical: hp(15),
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#F1F5F9',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 10,
+    justifyContent: 'space-between',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 20,
   },
   footerTextContainer: {
     flex: 1,
+    marginRight: wp(15),
   },
   footerTitle: {
-    fontSize: fs(12),
+    fontSize: fs(11),
+    fontWeight: '800',
     color: '#64748B',
-    fontWeight: '500',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
     marginBottom: hp(2),
   },
   footerSubtitle: {
-    fontSize: fs(14),
+    fontSize: fs(15),
     fontWeight: '700',
     color: '#1E293B',
   },
   continueBtn: {
+    backgroundColor: '#2563EB',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
     paddingHorizontal: wp(20),
     paddingVertical: hp(12),
-    borderRadius: ms(8),
+    borderRadius: ms(12),
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   continueBtnText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: fs(14),
     fontWeight: '700',
-    marginRight: wp(6),
+    marginRight: wp(8),
+  },
+  completedQuizBtn: {
+    backgroundColor: '#8B5CF6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: hp(15),
+    borderRadius: ms(12),
+    marginTop: hp(20),
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  completedQuizBtnText: {
+    color: '#FFFFFF',
+    fontSize: fs(16),
+    fontWeight: '700',
+    marginLeft: wp(8),
   },
 });

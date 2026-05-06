@@ -9,6 +9,7 @@ import {
   BackHandler,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useNavigation } from 'expo-router';
@@ -22,22 +23,34 @@ import { formatImageUrl } from '../../../utils/imageUtils';
 const LevelCard = ({ 
   image, title, stats, progress, status, buttonText, 
   buttonVariant = 'primary', locked = false, badgeText,
-  onPress, rawLevel
+  onPress, onFaqPress, rawLevel
 }) => {
   const { t } = useTranslation();
 
   return (
-    <TouchableOpacity 
-      style={styles.card} 
-      onPress={onPress}
-      activeOpacity={0.9}
-    >
-      <View style={styles.imageContainer}>
-        <Image 
-          source={formatImageUrl(image)} 
-          style={styles.levelImage} 
-          resizeMode="cover" 
-        />
+    <View style={[styles.card, locked && styles.cardLocked]}>
+      <TouchableOpacity 
+        style={[styles.imageContainer, !image && { backgroundColor: '#E2E8F0' }]} 
+        onPress={onPress}
+        disabled={locked}
+        activeOpacity={0.9}
+      >
+        {image ? (
+          <Image 
+            source={formatImageUrl(image)} 
+            style={[styles.levelImage, locked && styles.levelImageLocked]} 
+            resizeMode="cover" 
+          />
+        ) : (
+          <LinearGradient 
+            colors={['#1E3A8A', '#3B82F6']} 
+            start={{ x: 0, y: 0 }} 
+            end={{ x: 1, y: 1 }} 
+            style={styles.blankImage}
+          >
+             <Ionicons name="school-outline" size={ms(40)} color="rgba(255,255,255,0.2)" />
+          </LinearGradient>
+        )}
         {badgeText && (
           <View style={[styles.badge, 
             status === 'Completed' && { backgroundColor: AppColors.badgeTealBg },
@@ -47,31 +60,65 @@ const LevelCard = ({
              <Text style={styles.badgeText}>{badgeText}</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
       <View style={styles.cardContent}>
-        <Text style={styles.levelTitle} numberOfLines={2}>{title}</Text>
-        <Text style={styles.levelStats}>{stats}</Text>
-        <View style={styles.progressContainer}>
-           <Text style={styles.progressLabel}>{t('levels.level_progress')}</Text>
-           <View style={styles.progressBarTrack}>
-              <View style={[styles.progressBar, { 
-                width: `${progress}%`, 
-                backgroundColor: status === 'Completed' ? AppColors.primaryDark : (status === 'Running' ? AppColors.teal : AppColors.disabled) 
-              }]} />
-           </View>
-           <Text style={styles.progressPercentage}>{progress}%</Text>
+        <Text style={[styles.levelTitle, locked && { color: AppColors.textSecondary }]} numberOfLines={2}>{title}</Text>
+        <View style={styles.statsContainer}>
+          <Ionicons name="book-outline" size={ms(14)} color={AppColors.textSecondary} />
+          <Text style={styles.levelStats}>{stats}</Text>
         </View>
-        <View style={[styles.actionButton, 
-          buttonVariant === 'primary' && { backgroundColor: AppColors.primaryDark },
-          buttonVariant === 'secondary' && { backgroundColor: AppColors.teal },
-          buttonVariant === 'locked' && { backgroundColor: AppColors.backgroundWhite, borderWidth: 1.5, borderColor: AppColors.primaryDark },
-          locked && { borderColor: AppColors.primaryDark }
-        ]}>
-          <Text style={[styles.buttonText, locked && { color: AppColors.primaryDark }]}>{buttonText}</Text>
-          {locked && <Ionicons name="lock-closed" size={ms(18)} color={AppColors.textSecondary} style={{ marginLeft: wp(8) }} />}
-        </View>
+
+        {!locked && (
+          <View style={styles.progressContainer}>
+             <View style={styles.progressHeader}>
+                <View style={styles.progressLabelRow}>
+                   <Text style={styles.progressLabel}>{t('levels.level_progress')}</Text>
+                </View>
+                <Text style={styles.progressPercentage}>{progress}%</Text>
+             </View>
+             <View style={styles.progressBarTrack}>
+                <View style={[styles.progressBar, { 
+                  width: `${progress}%`, 
+                  backgroundColor: status === 'Completed' ? AppColors.primaryDark : (status === 'Running' ? AppColors.teal : AppColors.disabled) 
+                }]} />
+             </View>
+          </View>
+        )}
+
+        <TouchableOpacity 
+          style={[styles.faqButton, locked && styles.faqButtonLocked]} 
+          onPress={onFaqPress}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name="help-circle" 
+            size={ms(20)} 
+            color={locked ? AppColors.textSecondary : AppColors.warning} 
+          />
+          <Text style={[styles.faqButtonText, locked && { color: AppColors.textSecondary }]}>
+            {t('levels.faqs')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.actionButton, 
+            buttonVariant === 'primary' && { backgroundColor: AppColors.primaryDark },
+            buttonVariant === 'secondary' && { backgroundColor: AppColors.teal },
+            buttonVariant === 'locked' && { backgroundColor: AppColors.backgroundLight },
+            locked && { backgroundColor: AppColors.backgroundLight, borderWidth: 0 }
+          ]}
+          onPress={onPress}
+          disabled={locked}
+          activeOpacity={0.8}
+        >
+          {locked && <Ionicons name="lock-closed" size={ms(18)} color={AppColors.textSecondary} style={{ marginRight: wp(8) }} />}
+          <Text style={[styles.buttonText, locked && { color: AppColors.textSecondary }]}>
+            {locked ? t('levels.locked') : buttonText}
+          </Text>
+          {!locked && <Ionicons name="arrow-forward" size={ms(18)} color={AppColors.textWhite} style={{ marginLeft: wp(8) }} />}
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -121,6 +168,13 @@ export default function LevelsScreen() {
     router.push({
       pathname: '/(tabs)/levels/details',
       params: { id: levelId }
+    });
+  };
+
+  const handleFaqPress = (levelId) => {
+    router.push({
+      pathname: '/(tabs)/levels/faq',
+      params: { id: levelId, type: 'level' }
     });
   };
 
@@ -190,30 +244,31 @@ export default function LevelsScreen() {
 
              const currentStatus = isCompleted ? 'Completed' : (isUnlocked ? 'Running' : 'Locked');
              
-             return (
-               <LevelCard 
-                 key={level.id}
-                 image={level.thumbnail || (level.id == 1 ? require('../../../assets/my-level-1.png') : (level.id == 2 ? require('../../../assets/my-level-2.png') : require('../../../assets/my-level-3.png')))} 
-                 title={level.title || t('levels.title_f1')} 
-                 stats={t('levels.stats_format', { hours: level.duration || 4.5, modules: modulesCount })} 
-                 progress={progressPercentage} 
-                 status={level.status || currentStatus} 
-                 badgeText={(level.status || currentStatus).toUpperCase()} 
-                 buttonText={isCompleted ? t('levels.take_exam') : (isUnlocked ? t('levels.continue') : t('levels.start_level'))} 
-                 buttonVariant={isCompleted ? 'primary' : (isUnlocked ? 'secondary' : 'locked')} 
-                 locked={!isUnlocked}
-                 rawLevel={level}
-                 onPress={() => isUnlocked && handleLevelPress(level.id)}
-               />
-             );
+              return (
+                <LevelCard 
+                  key={level.id}
+                  image={level.thumbnail} 
+                  title={level.title || t('levels.title_f1')} 
+                  stats={t('levels.stats_format', { hours: level.duration || 4.5, modules: modulesCount })} 
+                  progress={progressPercentage} 
+                  status={level.status || currentStatus} 
+                  badgeText={(level.status || currentStatus).toUpperCase()} 
+                  buttonText={isCompleted ? t('levels.take_exam') : (isUnlocked ? t('levels.continue') : t('levels.start_level'))} 
+                  buttonVariant={isCompleted ? 'primary' : (isUnlocked ? 'secondary' : 'locked')} 
+                  locked={!isUnlocked}
+                  rawLevel={level}
+                  onPress={() => isUnlocked && handleLevelPress(level.id)}
+                  onFaqPress={() => handleFaqPress(level.id)}
+                />
+              );
            })}
 
           {/* Fallback/Dummy levels if API returns empty */}
           {levels.length === 0 && (
             <>
-              <LevelCard image={require('../../../assets/my-level-1.png')} title={t('levels.title_f1')} stats={t('levels.stats_format', { hours: 4.5, modules: 2 })} progress={100} status="Completed" badgeText={t('levels.completed').toUpperCase()} buttonText={t('levels.take_exam')} buttonVariant="primary" onPress={() => handleLevelPress(1)} />
-              <LevelCard image={require('../../../assets/my-level-2.png')} title={t('levels.title_f2')} stats={t('levels.stats_format', { hours: 4.5, modules: 2 })} progress={60} status="Running" badgeText={t('levels.running').toUpperCase()} buttonText={t('levels.continue')} buttonVariant="secondary" onPress={() => handleLevelPress(2)} />
-              <LevelCard image={require('../../../assets/my-level-3.png')} title={t('levels.title_i1')} stats={t('levels.stats_format', { hours: 6.2, modules: 2 })} progress={0} status="Locked" badgeText={t('levels.locked').toUpperCase()} buttonText={t('levels.start_level')} buttonVariant="locked" locked={true} />
+              <LevelCard image={null} title={t('levels.title_f1')} stats={t('levels.stats_format', { hours: 4.5, modules: 2 })} progress={0} status="Running" badgeText={t('levels.running').toUpperCase()} buttonText={t('levels.continue')} buttonVariant="secondary" onPress={() => handleLevelPress(1)} onFaqPress={() => handleFaqPress(1)} />
+              <LevelCard image={null} title={t('levels.title_f2')} stats={t('levels.stats_format', { hours: 4.5, modules: 1 })} progress={0} status="Locked" badgeText={t('levels.locked').toUpperCase()} buttonText={t('levels.locked')} buttonVariant="locked" locked={true} onFaqPress={() => handleFaqPress(2)} />
+              <LevelCard image={null} title={t('levels.title_i1')} stats={t('levels.stats_format', { hours: 6.2, modules: 0 })} progress={0} status="Locked" badgeText={t('levels.locked').toUpperCase()} buttonText={t('levels.locked')} buttonVariant="locked" locked={true} onFaqPress={() => handleFaqPress(3)} />
             </>
           )}
         </ScrollView>
@@ -235,19 +290,38 @@ const styles = StyleSheet.create({
   tabLabelActive: { color: AppColors.textWhite },
   scrollContent: { padding: Spacing.SCREEN_PADDING },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: { backgroundColor: AppColors.backgroundWhite, borderRadius: ms(20), marginBottom: hp(20), overflow: 'hidden', elevation: 4, shadowColor: AppColors.cardShadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-  imageContainer: { height: hp(180), width: '100%' },
+  card: { backgroundColor: AppColors.backgroundWhite, borderRadius: ms(20), marginBottom: hp(20), overflow: 'hidden', elevation: 4, shadowColor: AppColors.cardShadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
+  cardLocked: { opacity: 0.8 },
+  imageContainer: { height: hp(160), width: '100%', backgroundColor: AppColors.backgroundLight },
   levelImage: { width: '100%', height: '100%' },
+  levelImageLocked: { opacity: 0.6, tintColor: 'gray' },
+  blankImage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' },
   badge: { position: 'absolute', top: hp(15), right: wp(15), paddingHorizontal: wp(15), paddingVertical: hp(6), borderRadius: ms(8) },
   badgeText: { fontSize: fs(12), fontWeight: '800', color: AppColors.textDark },
   cardContent: { padding: wp(20) },
-  levelTitle: { fontSize: fs(17), fontWeight: '800', color: AppColors.textDark, marginBottom: hp(8), lineHeight: fs(24) },
-  levelStats: { fontSize: fs(13), color: AppColors.textSecondary, marginBottom: hp(20) },
+  levelTitle: { fontSize: fs(20), fontWeight: '800', color: AppColors.textDark, marginBottom: hp(4), lineHeight: fs(28) },
+  statsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: hp(15) },
+  levelStats: { fontSize: fs(14), color: AppColors.textSecondary, marginLeft: wp(6) },
   progressContainer: { marginBottom: hp(20) },
-  progressLabel: { fontSize: fs(12), fontWeight: '600', color: AppColors.textSecondary, marginBottom: hp(8) },
-  progressBarTrack: { height: hp(8), backgroundColor: AppColors.backgroundLight, borderRadius: ms(4), marginBottom: hp(5) },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: hp(8) },
+  progressLabelRow: { flexDirection: 'row', alignItems: 'center' },
+  progressLabel: { fontSize: fs(12), fontWeight: '700', color: AppColors.textSecondary },
+  progressBarTrack: { height: hp(8), backgroundColor: AppColors.backgroundLight, borderRadius: ms(4) },
   progressBar: { height: '100%', borderRadius: ms(4) },
-  progressPercentage: { textAlign: 'right', fontSize: fs(12), fontWeight: '700', color: AppColors.textDark },
-  actionButton: { height: hp(55), borderRadius: ms(12), alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+  progressPercentage: { fontSize: fs(12), fontWeight: '800', color: AppColors.textDark },
+  faqButton: { 
+    height: hp(48), 
+    borderRadius: ms(12), 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: hp(12), 
+    backgroundColor: '#FFF7ED', 
+    borderWidth: 1, 
+    borderColor: '#FED7AA' 
+  },
+  faqButtonLocked: { backgroundColor: AppColors.backgroundLight, borderColor: AppColors.border },
+  faqButtonText: { fontSize: fs(15), fontWeight: '700', marginLeft: wp(8), color: AppColors.warning },
+  actionButton: { height: hp(52), borderRadius: ms(12), alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
   buttonText: { fontSize: fs(16), fontWeight: '700', color: AppColors.textWhite },
 });

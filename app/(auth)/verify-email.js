@@ -20,17 +20,26 @@ import { verifyEmail, clearAuthMessages } from '../../redux/slices/authSlice';
 export default function VerifyEmailScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { email = 'your registered email' } = useLocalSearchParams();
+  const { email = 'your registered email', token: tokenFromParams = '' } = useLocalSearchParams();
   const { actionLoading } = useSelector((state) => state.auth);
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState(tokenFromParams || '');
 
-  const handleVerify = async () => {
-    if (!token.trim()) {
+  // Auto-verify if token is provided in deep link
+  React.useEffect(() => {
+    if (tokenFromParams) {
+      handleVerify(tokenFromParams);
+    }
+  }, [tokenFromParams]);
+
+  const handleVerify = async (manualToken) => {
+    const tokenToVerify = (typeof manualToken === 'string' ? manualToken : token).trim();
+    
+    if (!tokenToVerify) {
       Alert.alert('Missing Token', 'Please enter the verification token received in your email.');
       return;
     }
 
-    const action = await dispatch(verifyEmail(token.trim()));
+    const action = await dispatch(verifyEmail(tokenToVerify));
     if (verifyEmail.fulfilled.match(action)) {
       dispatch(clearAuthMessages());
       Alert.alert('Success', 'Email verified successfully. You can now login.', [

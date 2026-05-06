@@ -14,7 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
-import { fetchTopicContent, toggleTopicContentRead } from '../../../redux/slices/courseSlice';
+import { fetchTopicContent, toggleTopicContentRead, fetchTopicProgress } from '../../../redux/slices/courseSlice';
 import i18n from '../../../i18n';
 
 const ContentCard = ({ item, topicId }) => {
@@ -115,23 +115,41 @@ export default function TopicDetailsScreen() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   
-  const { topicContent, loading } = useSelector((state) => state.course);
+  const { topicContent, currentTopic, loading } = useSelector((state) => state.course);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (id) {
       dispatch(fetchTopicContent({ topicId: id, lang: i18n.language, page: 1 }));
+      dispatch(fetchTopicProgress(id));
     }
   }, [dispatch, id, i18n.language]);
 
-  if (loading.topicContent) {
-    return (
-      <View style={[styles.container, styles.loaderContainer]}>
-        <ActivityIndicator size="large" color="#1E3A8A" />
-      </View>
-    );
-  }
-
   const contentList = topicContent?.data || [];
+  const totalContent = topicContent?.total || contentList.length;
+  
+  const isAllRead = contentList.length > 0 && contentList.every(item => 
+    item.is_read == 1 || item.is_read == true || item.is_read == 'true'
+  );
+
+  const topicData = currentTopic || {};
+  const assessmentId = topicData.assessment_id || 
+                       topicData.quiz_id || 
+                       (topicData.assessment && topicData.assessment.id) || 
+                       (topicData.quiz && topicData.quiz.id) || 
+                       (topicData.id && (topicData.assessment_id || topicData.quiz_id || topicData.assessment || topicData.quiz) ? topicData.id : null);
+
+  // If we have a topic, but no explicit quiz ID, check if the topic itself can be a quiz
+  // For safety, let's use the ID if we are sure it's intended to be a quiz
+  const finalAssessmentId = assessmentId || (topicData.id && (topicData.has_assessment || topicData.has_quiz) ? topicData.id : null);
+
+  const handleQuizPress = () => {
+    const quizIdToUse = finalAssessmentId || id;
+    router.push({
+      pathname: '/(tabs)/levels/exam',
+      params: { id: quizIdToUse }
+    });
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -146,22 +164,47 @@ export default function TopicDetailsScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.gridContainer}>
-          {contentList.map((item, index) => (
-            <ContentCard key={item.id?.toString() || index.toString()} item={item} topicId={id} />
-          ))}
+      {loading.topicContent && !refreshing ? (
+        <View style={[styles.container, styles.loaderContainer]}>
+          <ActivityIndicator size="large" color="#1E3A8A" />
         </View>
-        
-        {contentList.length > 0 && (
-          <Text style={styles.footerText}>
-            {t('common.showing', 'Showing')} {contentList.length} {t('levels.of', 'of')} {topicContent?.total || contentList.length} {t('levels.topics', 'topics')}
-          </Text>
-        )}
-      </ScrollView>
+      ) : contentList.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconContainer}>
+            <Ionicons name="book-outline" size={ms(60)} color="#E2E8F0" />
+          </View>
+          <Text style={styles.emptyTitle}>{t('levels.no_topics', 'No Topics Available')}</Text>
+          <Text style={styles.emptySubtitle}>{t('levels.check_back_later', 'Check back later for new learning materials')}</Text>
+        </View>
+      ) : (
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.gridContainer}>
+            {contentList.map((item, index) => (
+              <ContentCard key={item.id?.toString() || index.toString()} item={item} topicId={id} />
+            ))}
+          </View>
+          
+          <View style={styles.footerContainer}>
+            <Text style={styles.footerText}>
+              {t('common.showing', 'Showing')} {contentList.length} {t('levels.of', 'of')} {totalContent} {t('levels.topics', 'topics')}
+            </Text>
+
+            {isAllRead && !(topicData.is_completed || topicData.is_passed) && (
+              <TouchableOpacity 
+                style={styles.quizBtn}
+                onPress={handleQuizPress}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="help-circle" size={ms(20)} color="#fff" />
+                <Text style={styles.quizBtnText}>{t('levels.start_topic_quiz', 'Start Topic Quiz')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -313,7 +356,59 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: fs(12),
     color: '#64748B',
-    marginTop: hp(20),
     fontWeight: '500',
+  },
+  footerContainer: {
+    marginTop: hp(25),
+    alignItems: 'center',
+    gap: hp(15),
+  },
+  quizBtn: {
+    width: '100%',
+    backgroundColor: '#D946EF', // Pink
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: hp(16),
+    borderRadius: ms(12),
+    gap: wp(10),
+    shadowColor: '#D946EF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  quizBtnText: {
+    color: '#FFFFFF',
+    fontSize: fs(16),
+    fontWeight: '800',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp(40),
+  },
+  emptyIconContainer: {
+    width: ms(100),
+    height: ms(100),
+    borderRadius: ms(50),
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: hp(20),
+  },
+  emptyTitle: {
+    fontSize: fs(20),
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: hp(8),
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: fs(14),
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: fs(20),
   },
 });
