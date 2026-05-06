@@ -33,6 +33,11 @@
               "scheme": "https",
               "host": "lms-backend.netswaptech.com",
               "pathPrefix": "/api/v1/trainee/verify-email"
+            },
+            {
+              "scheme": "https",
+              "host": "lms-backend.netswaptech.com",
+              "pathPrefix": "/api/v1/trainee/reset-password"
             }
           ],
           "category": [

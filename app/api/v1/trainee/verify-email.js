@@ -8,7 +8,10 @@ export default function DeepLinkHandler() {
     <Redirect 
       href={{
         pathname: '/(auth)/verify-email',
-        params: { token: params.token }
+        params: { 
+          token: params.token,
+          email: params.email 
+        }
       }} 
     />
   );
