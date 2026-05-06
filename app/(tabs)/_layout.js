@@ -66,9 +66,10 @@ export default function TabLayout() {
           ),
           tabBarLabelStyle: {
             color: isTabActive('home') ? AppColors.primary : AppColors.placeholder,
-            fontSize: 12,
-            fontWeight: '500',
-          }
+            fontSize: 10,
+            fontWeight: '600',
+          },
+          tabBarAllowFontScaling: false,
         }}
       />
       <Tabs.Screen
@@ -80,9 +81,10 @@ export default function TabLayout() {
           ),
           tabBarLabelStyle: {
             color: isTabActive('levels') ? AppColors.primary : AppColors.placeholder,
-            fontSize: 12,
-            fontWeight: '500',
-          }
+            fontSize: 10,
+            fontWeight: '600',
+          },
+          tabBarAllowFontScaling: false,
         }}
       />
       <Tabs.Screen
@@ -94,9 +96,10 @@ export default function TabLayout() {
           ),
           tabBarLabelStyle: {
             color: isTabActive('analytics') ? AppColors.primary : AppColors.placeholder,
-            fontSize: 12,
-            fontWeight: '500',
-          }
+            fontSize: 10,
+            fontWeight: '600',
+          },
+          tabBarAllowFontScaling: false,
         }}
       />
       <Tabs.Screen
@@ -108,9 +111,10 @@ export default function TabLayout() {
           ),
           tabBarLabelStyle: {
             color: isTabActive('assessment') ? AppColors.primary : AppColors.placeholder,
-            fontSize: 12,
-            fontWeight: '500',
-          }
+            fontSize: 10,
+            fontWeight: '600',
+          },
+          tabBarAllowFontScaling: false,
         }}
       />
       <Tabs.Screen
@@ -122,9 +126,10 @@ export default function TabLayout() {
           ),
           tabBarLabelStyle: {
             color: isTabActive('profile') ? AppColors.primary : AppColors.placeholder,
-            fontSize: 12,
-            fontWeight: '500',
-          }
+            fontSize: 10,
+            fontWeight: '600',
+          },
+          tabBarAllowFontScaling: false,
         }}
       />
     </Tabs>

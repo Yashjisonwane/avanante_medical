@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -108,8 +109,8 @@ export default function QuizResultScreen() {
         {/* Header Section */}
         <View style={styles.headerRow}>
            <View style={styles.headerIconWrapper}>
-              <View style={styles.headerIconCircle}>
-                 <Ionicons name="close" size={ms(24)} color="#fff" />
+              <View style={[styles.headerIconCircle, { backgroundColor: score >= 50 ? '#10B981' : '#E11D48', shadowColor: score >= 50 ? '#10B981' : '#E11D48' }]}>
+                 <Ionicons name={score >= 50 ? "checkmark" : "close"} size={ms(24)} color="#fff" />
               </View>
            </View>
             <View>
@@ -119,18 +120,44 @@ export default function QuizResultScreen() {
         </View>
 
         {/* Score Header Card */}
-        <View style={styles.scoreCard}>
+        <View style={[styles.scoreCard, { backgroundColor: score >= 50 ? '#F0FDF4' : '#FFF1F2', borderColor: score >= 50 ? '#DCFCE7' : '#FFE4E6' }]}>
            <Text style={styles.bgScoreText}>{score}</Text>
            <View style={styles.scoreCircleContainer}>
-               <View style={styles.scoreCircle}>
-                  <Text style={styles.scoreValueText}>{score}%</Text>
-                  <Text style={styles.scoreLabelText}>{t('exam.score', 'SCORE')}</Text>
+               <View style={styles.scoreCircleWrapper}>
+                  <Svg width={ms(150)} height={ms(150)} viewBox="0 0 100 100">
+                    {/* Background Circle */}
+                    <Circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      stroke={score >= 50 ? '#DCFCE7' : '#FFE4E6'}
+                      strokeWidth="8"
+                      fill="#FFFFFF"
+                    />
+                    {/* Progress Circle */}
+                    <Circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      stroke={score >= 50 ? '#10B981' : '#EF4444'}
+                      strokeWidth="8"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 42}`}
+                      strokeDashoffset={`${2 * Math.PI * 42 * (1 - score / 100)}`}
+                      strokeLinecap="round"
+                      transform="rotate(-90 50 50)"
+                    />
+                  </Svg>
+                  <View style={styles.scoreTextOverlay}>
+                      <Text style={styles.scoreValueText}>{score}%</Text>
+                      <Text style={styles.scoreLabelText}>{t('exam.score', 'SCORE')}</Text>
+                  </View>
                </View>
            </View>
-                      <Text style={styles.statusTitle}>
+                      <Text style={[styles.statusTitle, { color: score >= 50 ? '#166534' : '#881337' }]}>
               {score >= 50 ? t('exam.great_job', 'Great Job!') : t('exam.keep_practicing', 'Keep Practicing')}
             </Text>
-            <Text style={styles.statusMessage}>
+            <Text style={[styles.statusMessage, { color: score >= 50 ? '#15803D' : '#E11D48' }]}>
               {score >= 50 ? t('exam.passed_msg', 'You have passed the assessment') : t('exam.failed_msg', "Don't give up, review and try again")}
             </Text>
 
@@ -356,29 +383,28 @@ const styles = StyleSheet.create({
   },
   scoreCircleContainer: {
     marginBottom: hp(20),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  scoreCircle: {
-    width: ms(130),
-    height: ms(130),
-    borderRadius: ms(65),
-    borderWidth: 10,
-    borderColor: '#FFE4E6',
-    backgroundColor: '#FFFFFF',
+  scoreCircleWrapper: {
+    width: ms(150),
+    height: ms(150),
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    position: 'relative',
+  },
+  scoreTextOverlay: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scoreValueText: {
-    fontSize: fs(28),
+    fontSize: fs(32),
     fontWeight: '800',
     color: '#1E293B',
   },
   scoreLabelText: {
-    fontSize: fs(10),
+    fontSize: fs(12),
     fontWeight: '700',
     color: '#94A3B8',
     letterSpacing: 1,

@@ -75,10 +75,6 @@ export default function AuditLogsScreen() {
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-           <View style={styles.userSection}>
-              <Ionicons name="mail-outline" size={14} color={AppColors.placeholder} />
-              <Text style={styles.userEmailText}>{userEmail}</Text>
-           </View>
            <View style={[styles.eventBadge, { backgroundColor: eventColor + '15' }]}>
               <Text style={[styles.eventText, { color: eventColor }]}>{event}</Text>
            </View>
@@ -91,11 +87,11 @@ export default function AuditLogsScreen() {
 
         <View style={styles.infoRow}>
           <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>IP ADDRESS</Text>
+            <Text style={styles.infoLabel}>{t('analytics.ip_address', { defaultValue: 'IP ADDRESS' })}</Text>
             <Text style={styles.infoValue}>{ip}</Text>
           </View>
           <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>DEVICE</Text>
+            <Text style={styles.infoLabel}>{t('analytics.device', { defaultValue: 'DEVICE' })}</Text>
             <Text style={styles.infoValue} numberOfLines={1}>{device}</Text>
           </View>
         </View>
@@ -113,8 +109,8 @@ export default function AuditLogsScreen() {
             <Ionicons name="chevron-back" size={ms(24)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.titleGroup}>
-            <Text style={styles.headerTitle}>Audit Logs Report</Text>
-            <Text style={styles.headerSubtitle}>View all system audit logs</Text>
+            <Text style={styles.headerTitle}>{t('analytics.audit_logs_title', 'Audit Logs Report')}</Text>
+            <Text style={styles.headerSubtitle}>{t('analytics.view_all_audit', 'View all system audit logs')}</Text>
           </View>
         </View>
       </View>

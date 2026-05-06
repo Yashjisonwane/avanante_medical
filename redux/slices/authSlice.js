@@ -5,6 +5,8 @@ import {
   loadAccessToken,
   setAccessToken,
 } from '../api/baseApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import i18n from '../../i18n';
 
 const readTokenFromResponse = (payload = {}) =>
   payload?.token || payload?.access_token || payload?.data?.token || payload?.data?.access_token || null;
@@ -30,7 +32,17 @@ const normalizePayload = (payload = {}) =>
 
 export const hydrateAuth = createAsyncThunk('auth/hydrateAuth', async () => {
   const token = await loadAccessToken();
-  return { token };
+  const language = await AsyncStorage.getItem('user-language');
+  if (language) {
+    i18n.changeLanguage(language);
+  }
+  return { token, language: language || i18n.language };
+});
+
+export const setLanguage = createAsyncThunk('auth/setLanguage', async (language) => {
+  await AsyncStorage.setItem('user-language', language);
+  await i18n.changeLanguage(language);
+  return language;
 });
 
 export const loginUser = createAsyncThunk('auth/loginUser', async (payload) => {
@@ -140,6 +152,7 @@ const initialState = {
   user: null,
   isAuthenticated: false,
   isHydrated: false,
+  language: 'en',
   actionLoading: {
     login: false,
     register: false,
@@ -177,8 +190,12 @@ const authSlice = createSlice({
     builder
       .addCase(hydrateAuth.fulfilled, (state, action) => {
         state.token = action.payload.token;
+        state.language = action.payload.language;
         state.isAuthenticated = Boolean(action.payload.token);
         state.isHydrated = true;
+      })
+      .addCase(setLanguage.fulfilled, (state, action) => {
+        state.language = action.payload;
       })
       .addCase(loginUser.pending, (state) => {
         state.actionLoading.login = true;

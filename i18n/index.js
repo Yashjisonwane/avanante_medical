@@ -7,25 +7,28 @@ import en from './locales/en.json';
 import hi from './locales/hi.json';
 import pa from './locales/pa.json';
 
-const resources = {
+export const resources = {
   en: { translation: en },
   hi: { translation: hi },
   pa: { translation: pa },
 };
 
-// Get device language
-const deviceLanguage = Localization.getLocales()[0].languageCode;
+// Get device language as a fallback
+const getDeviceLanguage = () => {
+  const locales = Localization.getLocales();
+  return locales && locales.length > 0 ? locales[0].languageCode : 'en';
+};
 
 i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: deviceLanguage, // default language based on device
-    fallbackLng: 'en', // fallback language
+    lng: getDeviceLanguage(), // Initial language, will be updated by hydration
+    fallbackLng: 'en',
     interpolation: {
-      escapeValue: false, // react already safes from xss
+      escapeValue: false,
     },
-    compatibilityJSON: 'v3', // to support react-native
+    compatibilityJSON: 'v3',
   });
 
 export default i18n;

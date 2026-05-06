@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
 import { apiRequest } from '../../../redux/api/baseApi';
@@ -19,6 +20,7 @@ export default function CertificationReportScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const { user } = useSelector((state) => state.auth);
   
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -60,25 +62,31 @@ export default function CertificationReportScreen() {
     if (!item) return null;
     
     const trainee = item?.trainee || {};
-    const traineeEmail = trainee?.email || item?.trainee_email || item?.user_email || 'N/A';
+    const userName = item?.user_name || trainee?.name || user?.name || 'User';
+    const traineeEmail = item?.email || trainee?.email || item?.trainee_email || item?.user_email || user?.email || 'N/A';
     
-    const program = item?.program?.title || item?.course?.title || item?.title || item?.program_title || item?.course_name || 'N/A';
+    const program = item?.program || item?.program_title || item?.course?.title || item?.title || item?.course_name || 'N/A';
     const type = String(item?.type || item?.assessment_type || 'TOPIC').toUpperCase();
-    const certId = item?.certificate_id || item?.cert_id || 'N/A';
+    const certId = item?.certificate_id || item?.cert_id || item?.id || 'N/A';
     const score = item?.score || item?.obtained_marks || '0';
     const total = item?.total_marks || item?.max_marks || '100';
     const percentage = item?.percentage || item?.percent || '0';
-    const issueDate = item?.issue_date || item?.created_at;
+    const issueDate = item?.certificate_issue_date || item?.issue_date || item?.created_at;
     const formattedDate = issueDate ? new Date(issueDate).toLocaleDateString() : 'N/A';
-    const status = item?.status || 'Active';
+    const status = item?.certificate_status || item?.status || 'Active';
     const isAvailable = item?.is_available ?? true;
 
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
            <View style={styles.userSection}>
-              <Ionicons name="mail-outline" size={14} color={AppColors.placeholder} />
-              <Text style={styles.userEmailText}>{traineeEmail}</Text>
+              <View style={styles.userInfoCol}>
+                <Text style={styles.userNameText}>{userName}</Text>
+                <View style={styles.emailRow}>
+                  <Ionicons name="mail-outline" size={12} color={AppColors.placeholder} />
+                  <Text style={styles.userEmailText}>{traineeEmail}</Text>
+                </View>
+              </View>
            </View>
            <View style={[styles.statusBadge, { backgroundColor: '#E8F5E9' }]}>
               <Text style={[styles.statusText, { color: '#2E7D32' }]}>{status}</Text>
@@ -98,21 +106,21 @@ export default function CertificationReportScreen() {
         <View style={styles.divider} />
 
         <View style={styles.statsRow}>
-           <View style={styles.statItem}>
-              <Text style={styles.statLabel}>SCORE</Text>
-              <Text style={styles.statValue}>{score}/{total}</Text>
-           </View>
-           <View style={styles.statItem}>
-              <Text style={styles.statLabel}>PERCENTAGE</Text>
-              <Text style={[styles.statValue, { color: '#4CAF50' }]}>{percentage}%</Text>
-           </View>
-           <View style={styles.statItem}>
-              <Text style={styles.statLabel}>ISSUE DATE</Text>
-              <View style={styles.dateRow}>
-                 <Ionicons name="calendar-outline" size={12} color={AppColors.placeholder} />
-                 <Text style={styles.dateText}> {formattedDate}</Text>
-              </View>
-           </View>
+            <View style={styles.statItem}>
+               <Text style={styles.statLabel}>{t('analytics.score_upper', 'SCORE')}</Text>
+               <Text style={styles.statValue}>{score}/{total}</Text>
+            </View>
+            <View style={styles.statItem}>
+               <Text style={styles.statLabel}>{t('analytics.percentage_upper', 'PERCENTAGE')}</Text>
+               <Text style={[styles.statValue, { color: '#4CAF50' }]}>{percentage}%</Text>
+            </View>
+            <View style={styles.statItem}>
+               <Text style={styles.statLabel}>{t('analytics.issue_date_upper', 'ISSUE DATE')}</Text>
+               <View style={styles.dateRow}>
+                  <Ionicons name="calendar-outline" size={12} color={AppColors.placeholder} />
+                  <Text style={styles.dateText}> {formattedDate}</Text>
+               </View>
+            </View>
         </View>
 
         <View style={styles.cardFooter}>
@@ -121,15 +129,15 @@ export default function CertificationReportScreen() {
               style={styles.actionBtn}
               onPress={() => router.push({
                 pathname: '/analytics/certificate',
-                params: { assessmentId: item?.id }
+                params: { assessmentId: item?.passed_attempt_id || item?.id }
               })}
             >
               <Ionicons name="eye-outline" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>View Certificate</Text>
+              <Text style={styles.actionBtnText}>{t('analytics.view_cert_btn', 'View Certificate')}</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.unavailableBox}>
-              <Text style={styles.unavailableText}>Certificate Not Available</Text>
+              <Text style={styles.unavailableText}>{t('analytics.cert_not_available', 'Certificate Not Available')}</Text>
             </View>
           )}
         </View>
@@ -147,8 +155,8 @@ export default function CertificationReportScreen() {
             <Ionicons name="chevron-back" size={ms(24)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.titleGroup}>
-            <Text style={styles.headerTitle}>Certification Report</Text>
-            <Text style={styles.headerSubtitle}>View all user certifications</Text>
+            <Text style={styles.headerTitle}>{t('analytics.certification_report_title', 'Certification Report')}</Text>
+            <Text style={styles.headerSubtitle}>{t('analytics.view_all_certs', 'View all user certifications')}</Text>
           </View>
         </View>
       </View>
@@ -261,12 +269,23 @@ const styles = StyleSheet.create({
     marginBottom: hp(12),
   },
   userSection: {
+    flex: 1,
+  },
+  userInfoCol: {
+    gap: hp(2),
+  },
+  userNameText: {
+    fontSize: fs(14),
+    fontWeight: '800',
+    color: AppColors.textDark,
+  },
+  emailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(4),
   },
   userEmailText: {
-    fontSize: fs(12),
+    fontSize: fs(11),
     color: AppColors.textSecondary,
     fontWeight: '500',
   },

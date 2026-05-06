@@ -59,53 +59,48 @@ export default function UserProgressScreen() {
   const renderItem = ({ item }) => {
     if (!item) return null;
     
-    const trainee = item?.trainee || {};
-    const traineeEmail = trainee?.email || item?.trainee_email || item?.user_email || 'N/A';
+    const traineeEmail = item?.email || item?.trainee_email || item?.user_email || 'N/A';
     
-    const level = item?.level?.title || item?.level_title || 'N/A';
-    const module = item?.module?.title || item?.module_title || 'N/A';
-    const chapter = item?.chapter?.title || item?.chapter_title || 'N/A';
-    const topic = item?.topic?.title || item?.topic_title || 'N/A';
+    const level = item?.level || item?.level_title || 'N/A';
+    const module = item?.module || item?.module_title || 'N/A';
+    const chapter = item?.chapter || item?.chapter_title || 'N/A';
+    const topic = item?.topic || item?.topic_title || 'N/A';
     
-    const progress = Number(item?.progress ?? item?.completion_percent ?? 0);
-    const status = String(item?.status || (progress === 100 ? 'Completed' : 'In Progress'));
-    const isCompleted = status.toLowerCase() === 'completed';
-    const date = (item?.updated_at || item?.created_at) ? new Date(item.updated_at || item.created_at).toLocaleDateString() : 'N/A';
+    const progress = Number(item?.completion_percentage ?? item?.progress ?? item?.completion_percent ?? 0);
+    const status = item?.completion_status || item?.status || (progress === 100 ? 'Completed' : 'In Progress');
+    const isCompleted = status.toLowerCase() === 'completed' || item?.is_completed == true;
+    const date = (item?.last_activity_date || item?.updated_at || item?.created_at) ? new Date(item.last_activity_date || item.updated_at || item.created_at).toLocaleDateString() : 'N/A';
 
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-           <View style={styles.userSection}>
-              <Ionicons name="mail-outline" size={14} color={AppColors.placeholder} />
-              <Text style={styles.userEmailText}>{traineeEmail}</Text>
-           </View>
            <View style={[styles.statusBadge, { backgroundColor: isCompleted ? '#E8F5E9' : '#FFF3E0' }]}>
               <Text style={[styles.statusText, { color: isCompleted ? '#2E7D32' : '#EF6C00' }]}>{status}</Text>
            </View>
         </View>
 
         <View style={styles.hierarchySection}>
-           <Text style={styles.hierarchyLabel}>LEVEL</Text>
+           <Text style={styles.hierarchyLabel}>{t('analytics.level_upper', 'LEVEL')}</Text>
            <Text style={styles.hierarchyValue}>{level}</Text>
            
            <View style={styles.hierarchyRow}>
               <View style={styles.hierarchyItem}>
-                <Text style={styles.hierarchyLabel}>MODULE</Text>
+                <Text style={styles.hierarchyLabel}>{t('analytics.module_upper', 'MODULE')}</Text>
                 <Text style={styles.hierarchyValue} numberOfLines={1}>{module}</Text>
               </View>
               <View style={styles.hierarchyItem}>
-                <Text style={styles.hierarchyLabel}>CHAPTER</Text>
+                <Text style={styles.hierarchyLabel}>{t('analytics.chapter_upper', 'CHAPTER')}</Text>
                 <Text style={styles.hierarchyValue} numberOfLines={1}>{chapter}</Text>
               </View>
            </View>
 
-           <Text style={styles.hierarchyLabel}>TOPIC</Text>
+           <Text style={styles.hierarchyLabel}>{t('analytics.topic_upper', 'TOPIC')}</Text>
            <Text style={styles.hierarchyValue}>{topic}</Text>
         </View>
 
         <View style={styles.progressSection}>
            <View style={styles.progressLabelRow}>
-              <Text style={styles.progressLabel}>Completion</Text>
+              <Text style={styles.progressLabel}>{t('analytics.completion', 'Completion')}</Text>
               <Text style={styles.progressPercent}>{progress}%</Text>
            </View>
            <View style={styles.progressBarBg}>
@@ -116,11 +111,11 @@ export default function UserProgressScreen() {
         <View style={styles.cardFooter}>
           <View style={styles.dateBox}>
             <Ionicons name="time-outline" size={14} color={AppColors.placeholder} />
-            <Text style={styles.dateText}> Last Activity: {date}</Text>
+            <Text style={styles.dateText}> {t('analytics.last_activity', 'Last Activity')}: {date}</Text>
           </View>
           <View style={styles.lockStatus}>
             <Ionicons name="lock-open-outline" size={14} color="#4CAF50" />
-            <Text style={styles.lockText}> Unlocked</Text>
+            <Text style={styles.lockText}> {t('analytics.unlocked', 'Unlocked')}</Text>
           </View>
         </View>
       </View>
@@ -137,8 +132,8 @@ export default function UserProgressScreen() {
             <Ionicons name="chevron-back" size={ms(24)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.titleGroup}>
-            <Text style={styles.headerTitle}>User Progress Report</Text>
-            <Text style={styles.headerSubtitle}>View all user progress data</Text>
+            <Text style={styles.headerTitle}>{t('analytics.user_progress_title', 'User Progress Report')}</Text>
+            <Text style={styles.headerSubtitle}>{t('analytics.view_all_progress', 'View all user progress data')}</Text>
           </View>
         </View>
       </View>

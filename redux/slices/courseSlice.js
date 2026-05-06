@@ -43,6 +43,16 @@ export const fetchTopicProgress = createAsyncThunk(
   }
 );
 
+export const fetchDashboard = createAsyncThunk(
+  'course/fetchDashboard',
+  async () => {
+    return apiRequest({
+      endpoint: `/trainee/dashboard?lang=${i18n.language}`,
+      method: 'GET',
+    });
+  }
+);
+
 export const getHierarchyThunk = createAsyncThunk(
   'course/fetchCourseHierarchy',
   async (params = {}) => {
@@ -162,11 +172,11 @@ export const submitAssessmentFeedback = createAsyncThunk(
   }
 );
 
-export const fetchTopicFaqs = createAsyncThunk(
-  'course/fetchTopicFaqs',
-  async (topicId) => {
+export const fetchFaqs = createAsyncThunk(
+  'course/fetchFaqs',
+  async ({ type, id }) => {
     return apiRequest({
-      endpoint: `/trainee/faqs/topic/${topicId}?lang=${i18n.language}`,
+      endpoint: `/trainee/faqs/${type}/${id}?lang=${i18n.language}`,
       method: 'GET',
     });
   }
@@ -190,6 +200,7 @@ const initialState = {
     loading: false,
     error: null,
   },
+  dashboard: null,
   loading: {
     levels: false,
     levelDetail: false,
@@ -279,6 +290,18 @@ const courseSlice = createSlice({
       .addCase(fetchTopicProgress.fulfilled, (state, action) => {
         state.loading.topicDetail = false;
         state.currentTopic = action.payload.data || action.payload;
+      })
+      // Dashboard Data
+      .addCase(fetchDashboard.pending, (state) => {
+        state.loading.hierarchy = true;
+      })
+      .addCase(fetchDashboard.fulfilled, (state, action) => {
+        state.loading.hierarchy = false;
+        state.dashboard = action.payload.data || action.payload;
+      })
+      .addCase(fetchDashboard.rejected, (state, action) => {
+        state.loading.hierarchy = false;
+        state.error = action.error.message;
       })
       .addCase(getHierarchyThunk.pending, (state) => {
         state.loading.levels = true;

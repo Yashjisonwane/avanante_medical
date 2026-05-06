@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "524452800698",
+    "project_id": "lms-avanta",
+    "storage_bucket": "lms-avanta.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:524452800698:android:fdfb164a5f3aba0a447a83",
+        "android_client_info": {
+          "package_name": "com.avante.salestraining"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKOkEdKSh-XmcXxYtF-3S_UgLOg36vmh0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

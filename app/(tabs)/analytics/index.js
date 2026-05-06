@@ -7,85 +7,93 @@ import {
   TouchableOpacity,
   Image,
   BackHandler,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import { useRouter, useNavigation } from 'expo-router';
+import { useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs, SCREEN_WIDTH, isSmallDevice } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
+import { fetchDashboard } from '../../../redux/slices/courseSlice';
 
-const PROGRESS_DATA = {
-  current: [
-    {
-      id: 1,
-      title: 'analytics.item_def',
-      subtitle: 'analytics.module_patho',
-      progress: 100,
-      hasCertificate: true,
-    },
-    {
-      id: 2,
-      title: 'analytics.item_hist',
-      subtitle: 'analytics.module_patho',
-      progress: 75,
-      hasCertificate: false,
-    },
-  ],
-  past: [
-    {
-      id: 3,
-      title: 'analytics.item_types',
-      subtitle: 'analytics.module_fund',
-      progress: 100,
-      hasCertificate: true,
-    },
-    {
-      id: 4,
-      title: 'analytics.item_key',
-      subtitle: 'analytics.module_basics',
-      progress: 100,
-      hasCertificate: true,
-    },
-  ],
+const ModuleAccordion = ({ module, chapters }) => {
+  const [expanded, setExpanded] = useState(true);
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.moduleItem}>
+      <TouchableOpacity 
+        style={styles.moduleHeader} 
+        onPress={() => setExpanded(!expanded)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.moduleHeaderLeft}>
+          <View style={styles.moduleDot} />
+          <View style={[styles.gridIconBox, { backgroundColor: '#EFF6FF', width: ms(24), height: ms(24), marginRight: 8 }]}>
+            <Ionicons name="folder-open" size={ms(14)} color={AppColors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.moduleTitle}>{module.module_title}</Text>
+            <View style={styles.moduleMeta}>
+              <View style={styles.moduleBarTrack}>
+                <View style={[styles.moduleBarFill, { width: `${module.progress_percent}%` }]} />
+              </View>
+              <Text style={styles.modulePercent}>{Number(module.progress_percent).toFixed(1)}%</Text>
+              <Text style={styles.moduleFraction}>{t('analytics.module_fraction', { completed: module.completed_topics, total: module.total_topics })}</Text>
+            </View>
+          </View>
+        </View>
+        <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={AppColors.textSecondary} />
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={styles.chaptersList}>
+          {chapters?.map((chapter) => (
+            <View key={chapter.chapter_id} style={styles.chapterItem}>
+              <View style={styles.chapterIconBox}>
+                {chapter.progress_percent === 100 ? (
+                  <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                ) : chapter.progress_percent > 0 ? (
+                  <ActivityIndicator size="small" color={AppColors.primary} style={{ transform: [{ scale: 0.7 }] }} />
+                ) : (
+                  <Ionicons name="lock-closed" size={12} color="#CBD5E1" />
+                )}
+              </View>
+              <View style={[styles.gridIconBox, { backgroundColor: '#F8FAFC', width: ms(20), height: ms(20), marginRight: 8 }]}>
+                <Ionicons name="document-text" size={ms(10)} color={AppColors.textSecondary} />
+              </View>
+              <Text style={styles.chapterTitle}>{chapter.chapter_title}</Text>
+              <Text style={styles.chapterPercent}>{Number(chapter.progress_percent).toFixed(1)}%</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 };
+
+
 
 export default function AnalyticsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('current'); // 'current' or 'past'
 
-  useEffect(() => {
-    let backHandlerSubscription = null;
+  const { dashboard, loading } = useSelector((state) => state.course);
+  const stats = dashboard?.stats || {};
 
-    const onBackPress = () => {
-      // Prevent navigating back to Home tab - stay in flow
-      return true;
-    };
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(fetchDashboard());
+    }, [dispatch])
+  );
 
-    const unsubscribeFocus = navigation.addListener('focus', () => {
-      backHandlerSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    });
 
-    const unsubscribeBlur = navigation.addListener('blur', () => {
-      if (backHandlerSubscription) {
-        backHandlerSubscription.remove();
-        backHandlerSubscription = null;
-      }
-    });
 
-    return () => {
-      unsubscribeFocus();
-      unsubscribeBlur();
-      if (backHandlerSubscription) {
-        backHandlerSubscription.remove();
-      }
-    };
-  }, [navigation]);
-
-  const progressItems = activeTab === 'current' ? PROGRESS_DATA.current : PROGRESS_DATA.past;
 
   return (
     <View style={styles.container}>
@@ -97,7 +105,7 @@ export default function AnalyticsScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBackBtn}>
             <Ionicons name="chevron-back" size={ms(20)} color="#fff" />
           </TouchableOpacity>
-          <Text 
+          <Text
             style={styles.headerTitle}
             numberOfLines={1}
             adjustsFontSizeToFit
@@ -113,152 +121,171 @@ export default function AnalyticsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: hp(100) }}
       >
-        {/* Stats Cards Row */}
-        <View style={styles.statsCardsRow}>
-          {/* Completed Levels */}
-          <View style={styles.statsCard}>
-            <View style={styles.statsCardTop}>
-              <Text style={styles.statsCardLabel}>{t('analytics.levels')}</Text>
-              <View style={styles.statsIconRow}>
-                <View style={[styles.statsIconCircle, { backgroundColor: '#E8F5E9' }]}>
-                  <Ionicons name="checkmark-circle" size={ms(14)} color="#4CAF50" />
-                </View>
-                <View style={[styles.statsIconCircle, { backgroundColor: '#E3F2FD', marginLeft: -wp(6) }]}>
-                  <Ionicons name="school" size={ms(14)} color={AppColors.primary} />
-                </View>
+        <View style={styles.dashboardHeader}>
+          <Text style={styles.dashboardTitle}>{t('analytics.progress_dashboard', { defaultValue: 'Progress Dashboard' })}</Text>
+          <Text style={styles.dashboardSubtitle}>{t('analytics.progress_dashboard_desc', { defaultValue: 'Track your learning progress across modules and chapters' })}</Text>
+        </View>
+
+        {/* 4 Cards Grid */}
+        <View style={styles.statsGrid}>
+          {/* Levels Completed */}
+          <View style={styles.gridCard}>
+            <View style={styles.gridCardTop}>
+              <Text style={styles.gridCardLabel}>{t('analytics.levels_completed')}</Text>
+              <View style={[styles.gridIconBox, { backgroundColor: '#EFF6FF' }]}>
+                <Ionicons name="trophy" size={ms(18)} color="#2563EB" />
               </View>
             </View>
-            <Text 
-              style={styles.statsNumber}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              1
+            <Text style={styles.gridNumber}>{stats.completed_levels || 0}</Text>
+            <Text style={styles.gridSubtext}>
+              {stats.in_progress_levels || 0} {t('analytics.in_progress')}
             </Text>
-            <Text style={styles.statsStatus}>{t('home.completed')}</Text>
           </View>
 
-          <View style={styles.statsDivider} />
-
-          {/* Pending Levels */}
-          <View style={styles.statsCard}>
-            <View style={styles.statsCardTop}>
-              <Text style={styles.statsCardLabel}>{t('analytics.pending_levels')}</Text>
-              <View style={[styles.statsIconCircle, { backgroundColor: '#FFF3E0' }]}>
-                <Ionicons name="time" size={ms(14)} color="#FF9800" />
+          {/* Certificates */}
+          <View style={styles.gridCard}>
+            <View style={styles.gridCardTop}>
+              <Text style={styles.gridCardLabel}>{t('analytics.certificates')}</Text>
+              <View style={[styles.gridIconBox, { backgroundColor: '#F0FDF4' }]}>
+                <Ionicons name="ribbon" size={ms(18)} color="#10B981" />
               </View>
             </View>
-            <Text style={styles.statsNumber}>2</Text>
-            <Text style={[styles.statsStatus, { color: '#FF5252' }]}>{t('analytics.incomplete')}</Text>
+            <Text style={styles.gridNumber}>{stats.total_certificates || 0}</Text>
+            <Text style={styles.gridSubtext}>
+              {t('analytics.avg_score_label', { score: stats.avg_score || 0 })}
+            </Text>
+          </View>
+
+          {/* AVG Score */}
+          <View style={styles.gridCard}>
+            <View style={styles.gridCardTop}>
+              <Text style={styles.gridCardLabel}>{t('analytics.avg_score')}</Text>
+              <View style={[styles.gridIconBox, { backgroundColor: '#F5F3FF' }]}>
+                <Ionicons name="bar-chart" size={ms(18)} color="#7C3AED" />
+              </View>
+            </View>
+            <Text style={styles.gridNumber}>{stats.avg_score || 0}%</Text>
+            <Text style={styles.gridSubtext}>{t('analytics.overall_performance')}</Text>
+          </View>
+
+          {/* Topics Completed */}
+          <View style={styles.gridCard}>
+            <View style={styles.gridCardTop}>
+              <Text style={styles.gridCardLabel}>{t('analytics.topics_completed')}</Text>
+              <View style={[styles.gridIconBox, { backgroundColor: '#FFF7ED' }]}>
+                <Ionicons name="book" size={ms(18)} color="#EA580C" />
+              </View>
+            </View>
+            <Text style={styles.gridNumber}>
+              {stats.completed_topics || 0}/{stats.total_topics || 0}
+            </Text>
+            <Text style={styles.gridSubtext}>
+              {Number(stats.progress_percent).toFixed(1)}% {t('analytics.complete')}
+            </Text>
           </View>
         </View>
 
-        {/* AVG Score Section */}
-        <View style={styles.avgScoreCard}>
-          <View style={styles.avgScoreTop}>
-            <Text style={styles.avgScoreLabel}>AVG. SCORE</Text>
-            <View style={styles.trendIconContainer}>
-              <Ionicons name="trending-up" size={ms(16)} color={AppColors.primary} />
+        {/* Dashboard Sections Wrapper */}
+        <View style={styles.dashboardGrid}>
+          {/* Left Column: Current Focus & Quick Stats */}
+          <View style={styles.leftColumn}>
+            {/* CURRENT FOCUS */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitleSmall}>{t('analytics.current_focus')}</Text>
+              <View style={styles.focusContent}>
+                <Text style={styles.focusProgram}>{dashboard?.current_learning?.program?.title}</Text>
+                
+                <View style={styles.focusSteps}>
+                  <View style={styles.focusStep}>
+                    <Ionicons name="folder-outline" size={14} color={AppColors.primary} />
+                    <Text style={styles.focusStepLabel}>{t('modules.details_title', { defaultValue: 'Module' }).split(' ')[0]}</Text>
+                    <Text style={styles.focusStepValue}>{dashboard?.current_learning?.module?.title}</Text>
+                  </View>
+                  <View style={styles.focusStep}>
+                    <Ionicons name="document-text-outline" size={14} color={AppColors.primary} />
+                    <Text style={styles.focusStepLabel}>{t('chapters.details_title', { defaultValue: 'Chapter' }).split(' ')[0]}</Text>
+                    <Text style={styles.focusStepValue}>{dashboard?.current_learning?.chapter?.title}</Text>
+                  </View>
+                  <View style={styles.focusStep}>
+                    <Ionicons name="star" size={14} color="#F59E0B" />
+                    <Text style={styles.focusStepLabel}>{t('analytics.topic_label', { defaultValue: 'Topic' })}</Text>
+                    <Text style={styles.focusStepValueBold}>{dashboard?.current_learning?.topic?.title}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.focusProgressBox}>
+                  <View style={styles.progressHeader}>
+                    <Text style={styles.progressLabel}>{t('levels.level_progress', { defaultValue: 'Topic Progress' })}</Text>
+                    <Text style={styles.progressValue}>{Number(dashboard?.current_learning?.progress_percent).toFixed(1)}%</Text>
+                  </View>
+                  <View style={styles.progressBarTrack}>
+                    <View style={[styles.progressBarFill, { width: `${dashboard?.current_learning?.progress_percent || 0}%`, backgroundColor: AppColors.primary }]} />
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.continueBtn}
+                  onPress={() => {
+                    if (dashboard?.current_learning?.cta?.topic_id) {
+                      router.push({ pathname: '/(tabs)/levels/topic-details', params: { id: dashboard.current_learning.cta.topic_id } });
+                    }
+                  }}
+                >
+                  <Ionicons name="play-circle" size={20} color="#fff" />
+                  <Text style={styles.continueBtnText}>{t('analytics.continue_learning', { defaultValue: 'Continue Learning' })}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Quick Stats */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitleSmall}>{t('analytics.quick_stats')}</Text>
+              <View style={styles.quickStatsList}>
+                <View style={styles.quickStatItem}>
+                  <Text style={styles.quickStatLabel}>{t('analytics.total_topics_label')}</Text>
+                  <Text style={styles.quickStatValue}>{dashboard?.current_learning?.total_lessons || 0}</Text>
+                </View>
+                <View style={styles.quickStatItem}>
+                  <Text style={styles.quickStatLabel}>{t('analytics.completed_label')}</Text>
+                  <Text style={[styles.quickStatValue, { color: '#10B981' }]}>{dashboard?.current_learning?.completed_lessons || 0}</Text>
+                </View>
+                <View style={styles.quickStatItem}>
+                  <Text style={styles.quickStatLabel}>{t('analytics.in_progress_label')}</Text>
+                  <Text style={[styles.quickStatValue, { color: '#2563EB' }]}>{stats.in_progress_levels || 0}</Text>
+                </View>
+                <View style={styles.quickStatItem}>
+                  <Text style={styles.quickStatLabel}>{t('analytics.pending_quizzes_label')}</Text>
+                  <Text style={[styles.quickStatValue, { color: '#F59E0B' }]}>{dashboard?.current_learning?.pending_quizzes || 0}</Text>
+                </View>
+              </View>
             </View>
           </View>
-          
-          <View style={styles.avgScoreBottom}>
-            <View style={{ flex: 1 }}>
-              <Text 
-                style={styles.avgScoreValue}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                92%
-              </Text>
-              <Text style={styles.avgScoreSubtitle}>{t('analytics.top_percent')}</Text>
-            </View>
-            <View style={styles.avgScoreProgressContainer}>
-              <View style={styles.avgScoreProgressBarBg}>
-                <View style={[styles.avgScoreProgressBarFill, { width: '92%' }]} />
+
+          {/* Right Column: Module & Chapter Hierarchy */}
+          <View style={styles.rightColumn}>
+            <View style={styles.sectionCard}>
+              <View style={styles.hierarchyHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="folder" size={18} color={AppColors.primary} />
+                  <Text style={[styles.sectionTitleSmall, { marginBottom: 0, marginLeft: 8 }]}>{t('analytics.module_chapter_hierarchy')}</Text>
+                </View>
+                <Text style={styles.hierarchyCount}>{stats.modules_progress?.length || 0} {t('home.modules', { defaultValue: 'modules' }).toLowerCase()}</Text>
+              </View>
+
+              <View style={styles.hierarchyList}>
+                {stats.modules_progress?.map((module, idx) => (
+                  <ModuleAccordion 
+                    key={module.module_id} 
+                    module={module} 
+                    chapters={stats.chapters_progress?.filter(c => c.module_id === module.module_id)}
+                  />
+                ))}
               </View>
             </View>
           </View>
         </View>
 
-        {/* Current Progress / Past Level Toggle */}
         <View style={styles.toggleSection}>
-          <View style={styles.toggleRow}>
-            <Text 
-              style={styles.sectionTitle}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {activeTab === 'current' ? t('chapters.current_progress') : t('analytics.past_levels')}
-            </Text>
-            <TouchableOpacity
-              style={styles.pastLevelBtn}
-              onPress={() => setActiveTab(activeTab === 'current' ? 'past' : 'current')}
-            >
-              <Text style={styles.pastLevelBtnText}>
-                {activeTab === 'current' ? t('analytics.past_level') : t('chapters.current_progress')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Progress Items */}
-          {progressItems.map((item) => (
-            <View key={item.id} style={styles.progressCard}>
-              <View style={styles.progressCardHeader}>
-                <View style={styles.progressInfo}>
-                  <View style={styles.iconContainer}>
-                    <MaterialCommunityIcons 
-                      name="flask-outline" 
-                      size={ms(24)} 
-                      color={AppColors.primary} 
-                    />
-                  </View>
-                  <View style={styles.progressTextBlock}>
-                    <Text style={styles.progressTitle}>{t(item.title)}</Text>
-                    <Text style={styles.progressSubtitle}>{t(item.subtitle)}</Text>
-                  </View>
-                </View>
-                <View style={styles.progressPercentContainer}>
-                  <Text style={[
-                      styles.progressPercent,
-                      { color: AppColors.primary }
-                    ]}>
-                    {item.progress}%
-                  </Text>
-                </View>
-              </View>
-
-              {/* Progress Bar */}
-              <View style={styles.progressBarBg}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    {
-                      width: `${item.progress}%`,
-                      backgroundColor: AppColors.primary,
-                    },
-                  ]}
-                />
-              </View>
-
-              {/* Action Button */}
-              {item.hasCertificate ? (
-                <TouchableOpacity 
-                  style={styles.actionBtn} 
-                  onPress={() => router.push('/(tabs)/analytics/level-result')}
-                >
-                  <Text style={styles.actionBtnText}>{t('analytics.view_certificate')}</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity 
-                  style={styles.actionBtn}
-                  onPress={() => router.push('/(tabs)/levels')}
-                >
-                  <Text style={styles.actionBtnText}>{t('levels.continue_learning')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
 
           {/* Audit Logs Card */}
           <View style={styles.auditLogCard}>
@@ -273,7 +300,7 @@ export default function AnalyticsScreen() {
                 </View>
               </View>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
               onPress={() => router.push('/(tabs)/analytics/audit-logs')}
             >
@@ -294,7 +321,7 @@ export default function AnalyticsScreen() {
                 </View>
               </View>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
               onPress={() => router.push('/(tabs)/analytics/user-progress')}
             >
@@ -315,7 +342,7 @@ export default function AnalyticsScreen() {
                 </View>
               </View>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
               onPress={() => router.push('/(tabs)/analytics/certification-report')}
             >
@@ -405,132 +432,320 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* ─── Stats Cards ────────────────────────────────── */
-  statsCardsRow: {
+  /* ─── Dashboard Header ───────────────────────────── */
+  dashboardHeader: {
+    paddingHorizontal: wp(20),
+    marginTop: hp(24),
+    marginBottom: hp(16),
+  },
+  dashboardTitle: {
+    fontSize: fs(22),
+    fontWeight: '800',
+    color: AppColors.textDark,
+    marginBottom: hp(4),
+  },
+  dashboardSubtitle: {
+    fontSize: fs(13),
+    color: AppColors.textSecondary,
+    fontWeight: '500',
+    lineHeight: fs(18),
+  },
+
+  /* ─── Stats Grid ─────────────────────────────────── */
+  statsGrid: {
     flexDirection: 'row',
-    backgroundColor: AppColors.backgroundWhite,
-    marginHorizontal: wp(20),
-    marginTop: hp(20),
+    flexWrap: 'wrap',
+    paddingHorizontal: wp(16),
+    justifyContent: 'space-between',
+    gap: wp(10),
+    marginBottom: hp(20),
+  },
+  gridCard: {
+    backgroundColor: '#FFFFFF',
+    width: (SCREEN_WIDTH - wp(32) - wp(10)) / 2,
     borderRadius: ms(16),
-    padding: wp(20),
-    elevation: 6,
+    padding: wp(16),
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
-  statsCard: {
-    flex: 1,
-  },
-  statsCardTop: {
+  gridCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: hp(6),
+    marginBottom: hp(12),
   },
-  statsCardLabel: {
+  gridCardLabel: {
     fontSize: fs(10),
-    fontWeight: '800',
-    color: AppColors.textSecondary,
-    letterSpacing: 1.2,
-    lineHeight: fs(14),
-  },
-  statsIconRow: {
-    flexDirection: 'row',
-  },
-  statsIconCircle: {
-    width: wp(28),
-    height: wp(28),
-    borderRadius: wp(14),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  statsNumber: {
-    fontSize: fs(isSmallDevice ? 32 : 38),
-    fontWeight: '900',
-    color: AppColors.textDark,
-    lineHeight: fs(isSmallDevice ? 36 : 42),
-    marginBottom: hp(2),
-  },
-  statsStatus: {
-    fontSize: fs(11),
     fontWeight: '700',
-    color: AppColors.teal,
-    letterSpacing: 0.3,
-  },
-  statsDivider: {
-    width: 1,
-    backgroundColor: '#E8E8E8',
-    marginHorizontal: wp(isSmallDevice ? 10 : 16),
-  },
-
-  /* ─── AVG Score ──────────────────────────────────── */
-  avgScoreCard: {
-    backgroundColor: AppColors.backgroundWhite,
-    marginHorizontal: wp(isSmallDevice ? 12 : 20),
-    marginTop: hp(16),
-    borderRadius: ms(16),
-    padding: wp(isSmallDevice ? 15 : 16),
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
-  avgScoreTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  avgScoreLabel: {
-    fontSize: fs(11),
-    fontWeight: '800',
     color: AppColors.textSecondary,
-    letterSpacing: 1.2,
+    flex: 1,
+    marginRight: wp(8),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  trendIconContainer: {
+  gridIconBox: {
     width: wp(32),
     height: wp(32),
-    backgroundColor: '#EFF6FF',
     borderRadius: ms(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avgScoreBottom: {
+  gridNumber: {
+    fontSize: fs(22),
+    fontWeight: '800',
+    color: AppColors.textDark,
+    marginBottom: hp(4),
+  },
+  gridSubtext: {
+    fontSize: fs(11),
+    color: AppColors.textSecondary,
+    fontWeight: '600',
+  },
+
+  /* ─── Dashboard Grid Layout ───────────────────── */
+  dashboardGrid: {
+    paddingHorizontal: wp(16),
+    marginTop: hp(10),
+  },
+  leftColumn: {
+    flex: 1,
+    marginBottom: hp(12),
+  },
+  rightColumn: {
+    flex: 1,
+    marginBottom: hp(12),
+  },
+  sectionCard: {
+    backgroundColor: '#fff',
+    borderRadius: ms(16),
+    padding: wp(16),
+    marginBottom: hp(16),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  sectionTitleSmall: {
+    fontSize: fs(12),
+    fontWeight: '800',
+    color: AppColors.primary,
+    marginBottom: hp(16),
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+
+  /* ─── Current Focus ────────────────────────────── */
+  focusContent: {
+    paddingTop: hp(4),
+  },
+  focusProgram: {
+    backgroundColor: '#EFF6FF',
+    color: '#2563EB',
+    fontSize: fs(11),
+    fontWeight: '800',
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(4),
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: hp(16),
+  },
+  focusSteps: {
+    marginBottom: hp(20),
+  },
+  focusStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: hp(12),
+  },
+  focusStepLabel: {
+    fontSize: fs(11),
+    color: AppColors.textSecondary,
+    width: wp(80),
+    marginLeft: wp(8),
+  },
+  focusStepValue: {
+    fontSize: fs(12),
+    fontWeight: '600',
+    color: AppColors.textDark,
+    flex: 1,
+  },
+  focusStepValueBold: {
+    fontSize: fs(14),
+    fontWeight: '800',
+    color: AppColors.textDark,
+    flex: 1,
+  },
+  focusProgressBox: {
+    marginBottom: hp(20),
+  },
+  progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: hp(8),
+    marginBottom: hp(6),
   },
-  avgScoreValue: {
-    fontSize: fs(38),
-    fontWeight: '900',
-    color: AppColors.textDark,
-    lineHeight: fs(42),
+  progressLabel: {
+    fontSize: fs(11),
+    fontWeight: '700',
+    color: AppColors.textSecondary,
   },
-  avgScoreSubtitle: {
-    fontSize: fs(12),
+  progressValue: {
+    fontSize: fs(11),
+    fontWeight: '800',
+    color: AppColors.primary,
+  },
+  progressBarTrack: {
+    height: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  continueBtn: {
+    backgroundColor: AppColors.teal,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: hp(12),
+    borderRadius: ms(12),
+    gap: wp(8),
+  },
+  continueBtnText: {
+    color: '#fff',
+    fontSize: fs(14),
+    fontWeight: '800',
+  },
+
+  /* ─── Quick Stats ──────────────────────────────── */
+  quickStatsList: {
+    gap: hp(12),
+  },
+  quickStatItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: hp(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  quickStatLabel: {
+    fontSize: fs(13),
     fontWeight: '500',
     color: AppColors.textSecondary,
-    marginTop: hp(2),
   },
-  avgScoreProgressContainer: {
+  quickStatValue: {
+    fontSize: fs(14),
+    fontWeight: '800',
+    color: AppColors.textDark,
+  },
+
+  /* ─── Hierarchy ────────────────────────────────── */
+  hierarchyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp(20),
+  },
+  hierarchyCount: {
+    fontSize: fs(11),
+    color: AppColors.textSecondary,
+    fontWeight: '600',
+  },
+  hierarchyList: {
+    gap: hp(16),
+  },
+  moduleItem: {
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderRadius: ms(12),
+    overflow: 'hidden',
+  },
+  moduleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: wp(12),
+    backgroundColor: '#fff',
+  },
+  moduleHeaderLeft: {
     flex: 1,
-    marginLeft: wp(isSmallDevice ? 15 : 30),
-    marginBottom: hp(8),
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  avgScoreProgressBarBg: {
-    height: hp(8),
+  moduleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#2563EB',
+    marginRight: 10,
+  },
+  moduleTitle: {
+    fontSize: fs(14),
+    fontWeight: '800',
+    color: AppColors.textDark,
+    marginBottom: hp(4),
+  },
+  moduleMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  moduleBarTrack: {
+    width: wp(60),
+    height: 4,
     backgroundColor: '#F1F5F9',
-    borderRadius: ms(4),
-    width: '100%',
+    borderRadius: 2,
+    marginRight: 8,
   },
-  avgScoreProgressBarFill: {
+  moduleBarFill: {
     height: '100%',
-    backgroundColor: AppColors.primary,
-    borderRadius: ms(4),
+    backgroundColor: '#2563EB',
+    borderRadius: 2,
+  },
+  modulePercent: {
+    fontSize: fs(10),
+    fontWeight: '700',
+    color: AppColors.textSecondary,
+    marginRight: 8,
+  },
+  moduleFraction: {
+    fontSize: fs(10),
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  chaptersList: {
+    paddingHorizontal: wp(12),
+    paddingBottom: wp(12),
+    backgroundColor: '#FCFDFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+  },
+  chapterItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: hp(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  chapterIconBox: {
+    width: 20,
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  chapterTitle: {
+    fontSize: fs(12),
+    fontWeight: '600',
+    color: AppColors.textDark,
+    flex: 1,
+  },
+  chapterPercent: {
+    fontSize: fs(11),
+    fontWeight: '700',
+    color: AppColors.textSecondary,
   },
 
   /* ─── Toggle Section ─────────────────────────────── */
@@ -585,7 +800,7 @@ const styles = StyleSheet.create({
 
   /* ─── Progress Card ──────────────────────────────── */
   progressCard: {
-    backgroundColor: AppColors.backgroundWhite,
+    backgroundColor: '#FFFFFF',
     borderRadius: ms(16),
     padding: wp(16),
     marginBottom: hp(14),
@@ -596,7 +811,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   auditLogCard: {
-    backgroundColor: AppColors.backgroundWhite,
+    backgroundColor: '#FFFFFF',
     borderRadius: ms(16),
     padding: wp(16),
     marginTop: hp(10),

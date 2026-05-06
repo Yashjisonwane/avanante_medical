@@ -2,7 +2,7 @@
   "expo": {
     "name": "avanate-medical",
     "slug": "avanate-medical",
-    "scheme": "avanate-medical",
+    "scheme": "avante",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +22,25 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.avante.salestraining"
+      "package": "com.avante.salestraining",
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "lms-backend.netswaptech.com",
+              "pathPrefix": "/api/v1/trainee/verify-email"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "ios": {
       "bundleIdentifier": "com.avante.salestraining",

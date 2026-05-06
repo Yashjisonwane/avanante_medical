@@ -238,15 +238,35 @@ export default function ContentViewerScreen() {
   const router = useRouter();
   const { topicId, contentId } = useLocalSearchParams();
   const dispatch = useDispatch();
-  const [markingRead, setMarkingRead] = useState(false);
-
   const { singlePreview, loading } = useSelector((state) => state.course);
+  const [lastMarkedId, setLastMarkedId] = useState(null);
 
   useEffect(() => {
     if (topicId && contentId) {
       dispatch(fetchSinglePreview({ topicId, contentId }));
     }
   }, [dispatch, topicId, contentId]);
+
+  const topicData   = singlePreview?.topic     || {};
+  const contentData = singlePreview?.current   || {};
+  const navigation  = singlePreview?.navigation || {};
+
+  const isRead  =
+    contentData.is_read == 1 ||
+    contentData.is_read == true ||
+    contentData.is_read == 'true';
+
+  // Auto mark as read ONLY if unread and not already attempted for this contentId
+  useEffect(() => {
+    if (contentId && singlePreview && !isRead && lastMarkedId !== contentId) {
+      setLastMarkedId(contentId);
+      dispatch(toggleTopicContentRead(Number(contentId)));
+    }
+  }, [contentId, isRead, singlePreview]);
+
+  const isMedia = contentData.type === 'media' || contentData.type === 'video';
+  const prevId = navigation.previous_content_id || null;
+  const nextId = navigation.next_content_id     || null;
 
   if (loading.singlePreview) {
     return (
@@ -256,29 +276,13 @@ export default function ContentViewerScreen() {
     );
   }
 
-  const topicData   = singlePreview?.topic     || {};
-  const contentData = singlePreview?.current   || {};
-  const navigation  = singlePreview?.navigation || {};
-
-  const isMedia = contentData.type === 'media' || contentData.type === 'video';
-  const isRead  =
-    contentData.is_read == 1 ||
-    contentData.is_read == true ||
-    contentData.is_read == 'true';
-
-  const prevId = navigation.previous_content_id || null;
-  const nextId = navigation.next_content_id     || null;
-
   const handleMarkRead = async () => {
-    if (isRead || markingRead) return;
-    setMarkingRead(true);
+    if (isRead) return;
     try {
       await dispatch(toggleTopicContentRead(Number(contentId))).unwrap();
       dispatch(fetchSinglePreview({ topicId, contentId }));
     } catch (e) {
       // ignore
-    } finally {
-      setMarkingRead(false);
     }
   };
 
@@ -365,26 +369,12 @@ export default function ContentViewerScreen() {
           )}
         </View>
 
-        {isRead ? (
-          <View style={styles.alreadyReadBox}>
-            <Ionicons name="checkmark-circle" size={ms(20)} color="#10B981" />
-            <Text style={styles.alreadyReadText}>You have read this topic</Text>
+        {/* Auto-marking logic handles this now */}
+        {!isRead && (
+          <View style={styles.markingReadIndicator}>
+            <ActivityIndicator size="small" color="#10B981" />
+            <Text style={styles.markingReadText}>Marking progress...</Text>
           </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.markReadBtn}
-            onPress={handleMarkRead}
-            disabled={markingRead}
-          >
-            {markingRead ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle-outline" size={ms(18)} color="#fff" />
-                <Text style={styles.markReadBtnText}>Mark as Read</Text>
-              </>
-            )}
-          </TouchableOpacity>
         )}
 
         <View style={styles.navFooter}>
@@ -564,42 +554,21 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
   },
-  alreadyReadBox: {
+  markingReadIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F0FDF4',
+    borderRadius: ms(12),
+    paddingVertical: hp(12),
+    marginBottom: hp(25),
     borderWidth: 1,
-    borderColor: '#6EE7B7',
-    borderRadius: ms(12),
-    paddingVertical: hp(14),
-    marginBottom: hp(25),
+    borderColor: '#D1FAE5',
   },
-  alreadyReadText: {
-    fontSize: fs(14),
+  markingReadText: {
+    fontSize: fs(13),
     color: '#10B981',
-    fontWeight: '700',
-    marginLeft: wp(8),
-  },
-  markReadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#10B981',
-    borderRadius: ms(12),
-    paddingVertical: hp(14),
-    marginBottom: hp(25),
-    minHeight: hp(52),
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  markReadBtnText: {
-    fontSize: fs(15),
-    color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '600',
     marginLeft: wp(8),
   },
   navFooter: {

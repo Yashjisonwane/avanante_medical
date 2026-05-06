@@ -9,13 +9,14 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
-import { fetchTopicFaqs } from '../../../redux/slices/courseSlice';
+import { fetchFaqs } from '../../../redux/slices/courseSlice';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -51,7 +52,14 @@ const FAQItem = ({ item, index }) => {
       
       {expanded && (
         <View style={styles.faqAnswerContainer}>
-          <Text style={styles.answerText}>{item.answer}</Text>
+          {item.image && (
+            <Image 
+              source={formatImageUrl(item.image)} 
+              style={styles.faqImage} 
+              resizeMode="contain" 
+            />
+          )}
+          <Text style={[styles.answerText, item.image && { marginLeft: 0 }]}>{item.answer}</Text>
         </View>
       )}
     </View>
@@ -62,26 +70,32 @@ export default function FAQScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const dispatch = useDispatch();
-  const { topicId } = useLocalSearchParams();
+  const { id, type, topicId, moduleId, chapterId } = useLocalSearchParams();
   
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Determine type and id from any possible param
+  const faqType = type || (topicId ? 'topic' : (moduleId ? 'module' : (chapterId ? 'chapter' : 'level')));
+  const faqId = id || topicId || moduleId || chapterId;
+
   useEffect(() => {
     const loadFaqs = async () => {
-      if (topicId) {
+      if (faqId && faqType) {
         try {
-          const result = await dispatch(fetchTopicFaqs(topicId)).unwrap();
-          setFaqs(result?.data?.faqs || []);
+          const result = await dispatch(fetchFaqs({ type: faqType, id: faqId })).unwrap();
+          setFaqs(result?.data?.faqs || result?.data || []);
         } catch (e) {
           console.error("Failed to fetch FAQs", e);
         } finally {
           setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     };
     loadFaqs();
-  }, [topicId]);
+  }, [faqId, faqType]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -97,13 +111,13 @@ export default function FAQScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.headerSubtitle}>
-          Find answers to common questions about our courses
+          Find answers to common questions about our learning materials
         </Text>
 
         <View style={styles.badgeContainer}>
            <View style={styles.typeBadge}>
               <Ionicons name="pricetag-outline" size={ms(14)} color="#3B82F6" />
-              <Text style={styles.typeBadgeText}>Content Type: <Text style={{fontWeight: '700'}}>Topic</Text></Text>
+              <Text style={styles.typeBadgeText}>Category: <Text style={{fontWeight: '700', textTransform: 'capitalize'}}>{faqType}</Text></Text>
            </View>
         </View>
 
@@ -111,12 +125,12 @@ export default function FAQScreen() {
           <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: hp(50) }} />
         ) : faqs.length > 0 ? (
           faqs.map((item, index) => (
-            <FAQItem key={item.id} item={item} index={index} />
+            <FAQItem key={item.id || index} item={item} index={index} />
           ))
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="help-circle-outline" size={ms(60)} color="#CBD5E1" />
-            <Text style={styles.emptyText}>No FAQs available for this topic.</Text>
+            <Text style={styles.emptyText}>No FAQs available for this {faqType}.</Text>
           </View>
         )}
       </ScrollView>
@@ -231,6 +245,13 @@ const styles = StyleSheet.create({
     lineHeight: fs(22),
     marginTop: hp(12),
     marginLeft: wp(36),
+  },
+  faqImage: {
+    width: '100%',
+    height: hp(150),
+    borderRadius: ms(8),
+    marginTop: hp(12),
+    backgroundColor: '#F8FAFC',
   },
   emptyContainer: {
     alignItems: 'center',
