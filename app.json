@@ -13,7 +13,12 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.avante.salestraining",
+      "supportsTablet": true,
+      "associatedDomains": [
+        "applinks:lms-backend.netswaptech.com",
+        "applinks:avanta-sales.vercel.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +42,12 @@
             {
               "scheme": "https",
               "host": "lms-backend.netswaptech.com",
-              "pathPrefix": "/api/v1/trainee/reset-password"
+              "pathPrefix": "/verify-email"
+            },
+            {
+              "scheme": "https",
+              "host": "lms-backend.netswaptech.com",
+              "pathPrefix": "/reset-password"
             },
             {
               "scheme": "https",
@@ -57,20 +67,14 @@
         }
       ]
     },
-    "ios": {
-      "bundleIdentifier": "com.avante.salestraining",
-      "supportsTablet": true,
-      "associatedDomains": [
-        "applinks:lms-backend.netswaptech.com",
-        "applinks:avanta-sales.vercel.app"
-      ]
-    },
+
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-localization"
+      "expo-localization",
+      "expo-notifications"
     ],
     "updates": {
       "url": "https://u.expo.dev/INSERT_PROJECT_ID_HERE",

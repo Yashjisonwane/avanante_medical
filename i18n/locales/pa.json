@@ -43,7 +43,17 @@
     "thank_you": "ਧੰਨਵਾਦ!",
     "back_to_home": "ਹੋਮ 'ਤੇ ਵਾਪਸ ਜਾਓ",
     "next": "ਅਗਲਾ",
-    "start": "ਸ਼ੁਰੂ ਕਰੋ"
+    "start": "ਸ਼ੁਰੂ ਕਰੋ",
+    "good_morning": "ਸ਼ੁਭ ਸਵੇਰ",
+    "good_afternoon": "ਸ਼ੁਭ ਦੁਪਹਿਰ",
+    "good_evening": "ਸ਼ੁਭ ਸ਼ਾਮ",
+    "mobile": "ਮੋਬਾਈਲ ਨੰਬਰ",
+    "designation": "ਅਹੁਦਾ",
+    "city": "ਸ਼ਹਿਰ",
+    "success": "ਸਫਲਤਾ",
+    "error": "ਗਲਤੀ",
+    "missing_fields": "ਲੋੜੀਂਦੇ ਖੇਤਰ ਗਾਇਬ ਹਨ",
+    "permission_denied": "ਇਜਾਜ਼ਤ ਤੋਂ ਇਨਕਾਰ ਕੀਤਾ ਗਿਆ"
   },
   "auth": {
     "login_button": "ਸਾਈਨ ਇਨ ਕਰੋ",
@@ -103,7 +113,14 @@
     "resume": "ਜਾਰੀ ਰੱਖੋ",
     "continue": "ਜਾਰੀ ਰੱਖੋ",
     "next": "ਅਗਲਾ",
-    "cert_earned": "ਸਰਟੀਫਿਕੇਟ ਪ੍ਰਾਪਤ ਕੀਤਾ"
+    "cert_earned": "ਸਰਟੀਫਿਕੇਟ ਪ੍ਰਾਪਤ ਕੀਤਾ",
+    "current_topic_label": "ਮੌਜੂਦਾ ਵਿਸ਼ਾ",
+    "current_topic_progress": "ਮੌਜੂਦਾ ਵਿਸ਼ੇ ਦੀ ਪ੍ਰਗਤੀ",
+    "contents_read": "ਸਮੱਗਰੀ ਪੜ੍ਹੀ ਗਈ",
+    "ready_to_start": "ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਤਿਆਰ",
+    "quiz": "ਕਵਿਜ਼",
+    "close": "ਬੰਦ ਕਰੋ",
+    "module": "ਮੋਡੀਊਲ"
   },
   "analytics": {
     "learning_progress": "ਸਿੱਖਣ ਦੀ ਪ੍ਰਗਤੀ",
@@ -270,6 +287,7 @@
     "current_password": "ਮੌਜੂਦਾ ਪਾਸਵਰਡ",
     "new_password": "ਨਵਾਂ ਪਾਸਵਰਡ",
     "upload_photo": "ਫੋਟੋ ਅਪਲੋਡ ਕਰੋ",
+    "change_photo": "ਫੋਟੋ ਬਦਲੋ",
     "choose_method": "ਆਪਣੀ ਫੋਟੋ ਅਪਲੋਡ ਕਰਨ ਲਈ ਇੱਕ ਤਰੀਕਾ ਚੁਣੋ",
     "camera": "ਫੋਟੋ ਲਓ",
     "gallery": "ਗੈਲਰੀ ਤੋਂ ਚੁਣੋ"

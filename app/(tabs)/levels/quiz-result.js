@@ -38,14 +38,23 @@ export default function QuizResultScreen() {
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
  
-  const score = result?.percentage || result?.score || 0;
-  const total = result?.total || 5;
+  const score = Number(result?.percentage || result?.score || 0);
+  const total = result?.total || 0;
   const correct = result?.correct || 0;
   const wrong = result?.wrong || 0;
   const skipped = result?.skipped || 0;
-  const status = result?.status || 'failed';
+  const status = result?.status || (score >= 50 ? 'passed' : 'failed');
   const timeTakenSec = result?.time_taken_seconds || 0;
   const timeTakenMin = result?.time_taken_minutes || 0;
+
+  if (!result && !params.attempt_id) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={{ marginTop: hp(15), color: '#64748B' }}>{t('exam.preparing', 'Loading results...')}</Text>
+      </View>
+    );
+  }
 
   const handleFeedbackSubmit = async () => {
     if (rating === 0) {
@@ -62,17 +71,23 @@ export default function QuizResultScreen() {
     }
 
     try {
-      await dispatch(submitAssessmentFeedback({
+      const result = await dispatch(submitAssessmentFeedback({
         assessmentId: assessment_id,
         payload: {
           attempt_id: attempt_id,
+          assessment_id: assessment_id,
           rating: rating,
-          review: review
+          review: review,
+          comment: review, // Fallback key
+          feedback: review // Fallback key
         }
       })).unwrap();
       setFeedbackSubmitted(true);
+      Alert.alert(t('common.success', 'Success'), result?.message || 'Feedback submitted successfully!');
     } catch (e) {
-      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+      console.log('Feedback Error:', e);
+      const errorMsg = e?.message || e?.error || 'Failed to submit feedback. Please try again.';
+      Alert.alert(t('common.error', 'Error'), errorMsg);
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -168,7 +183,7 @@ export default function QuizResultScreen() {
                 color={score >= 50 ? "#16A34A" : "#E11D48"} 
               />
                <Text style={[styles.statusBadgeText, { color: score >= 50 ? "#16A34A" : "#E11D48" }]}>
-                 {status.toUpperCase()} • {t('exam.score', 'SCORE')}: {correct} / {total}
+                 {String(status || '').toUpperCase()} • {t('exam.score', 'SCORE')}: {correct} / {total}
                </Text>
            </View>
         </View>
@@ -206,6 +221,70 @@ export default function QuizResultScreen() {
                <Text style={styles.statValue}>{formatTime()}</Text>
                <Text style={styles.statLabel}>{t('exam.time_spent', 'TIME SPENT')}</Text>
             </View>
+        </View>
+ 
+        {/* Detailed Performance Analysis Section */}
+        <View style={styles.analysisCard}>
+          <View style={styles.cardHeader}>
+             <Ionicons name="stats-chart" size={ms(18)} color="#1E293B" />
+             <Text style={styles.cardTitle}>{t('exam.performance_analysis', 'Detailed Performance Analysis')}</Text>
+          </View>
+          
+          <View style={styles.analysisRow}>
+            <View style={styles.analysisLabelContainer}>
+              <Ionicons name="hash-outline" size={ms(14)} color="#64748B" />
+              <Text style={styles.analysisLabel}>{t('exam.attempt_id', 'Attempt ID')}</Text>
+            </View>
+            <Text style={styles.analysisValue}>#{attempt_id}</Text>
+          </View>
+
+          <View style={styles.analysisRow}>
+            <View style={styles.analysisLabelContainer}>
+              <Ionicons name="book-outline" size={ms(14)} color="#64748B" />
+              <Text style={styles.analysisLabel}>{t('exam.total_questions', 'Total Questions')}</Text>
+            </View>
+            <Text style={styles.analysisValue}>{total}</Text>
+          </View>
+
+          <View style={styles.analysisRow}>
+            <View style={styles.analysisLabelContainer}>
+              <Ionicons name="locate-outline" size={ms(14)} color="#64748B" />
+              <Text style={styles.analysisLabel}>{t('exam.questions_attempted', 'Questions Attempted')}</Text>
+            </View>
+            <Text style={styles.analysisValue}>{correct + wrong}</Text>
+          </View>
+
+          <View style={styles.analysisRow}>
+            <View style={styles.analysisLabelContainer}>
+              <Ionicons name="time-outline" size={ms(14)} color="#64748B" />
+              <Text style={styles.analysisLabel}>{t('exam.pending_questions', 'Pending Questions')}</Text>
+            </View>
+            <Text style={styles.analysisValue}>{Math.max(0, total - (correct + wrong))}</Text>
+          </View>
+
+          <View style={styles.analysisRow}>
+            <View style={styles.analysisLabelContainer}>
+              <Ionicons name="refresh-outline" size={ms(14)} color="#64748B" />
+              <Text style={styles.analysisLabel}>{t('exam.attempts_used', 'Attempts Used')}</Text>
+            </View>
+            <Text style={styles.analysisValue}>{details?.attempts_count || 1} / {details?.attempts_limit || 1}</Text>
+          </View>
+
+          <View style={styles.analysisRow}>
+            <View style={styles.analysisLabelContainer}>
+              <Ionicons name="ribbon-outline" size={ms(14)} color="#64748B" />
+              <Text style={styles.analysisLabel}>{t('exam.attempts_remaining', 'Attempts Remaining')}</Text>
+            </View>
+            <Text style={[styles.analysisValue, { color: '#F59E0B' }]}>{(details?.attempts_limit || 0) - (details?.attempts_count || 0)}</Text>
+          </View>
+
+          <View style={[styles.analysisRow, { borderBottomWidth: 0 }]}>
+            <View style={styles.analysisLabelContainer}>
+              <Ionicons name="timer-outline" size={ms(14)} color="#64748B" />
+              <Text style={styles.analysisLabel}>{t('exam.total_duration', 'Total Duration')}</Text>
+            </View>
+            <Text style={styles.analysisValue}>{result?.time_taken_minutes || (result?.time_taken_seconds ? (result.time_taken_seconds / 60).toFixed(2) : '0.00')} minutes</Text>
+          </View>
         </View>
 
         {/* Feedback Section */}
@@ -323,6 +402,12 @@ export default function QuizResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
   },
   content: {
@@ -469,16 +554,42 @@ const styles = StyleSheet.create({
   },
   feedbackCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: ms(20),
-    padding: ms(20),
+    borderRadius: ms(16),
+    padding: ms(15),
+    marginBottom: hp(20),
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
-    overflow: 'hidden',
+  },
+  analysisCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: ms(16),
+    padding: ms(15),
+    marginBottom: hp(20),
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  analysisRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: hp(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  analysisLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  analysisLabel: {
+    fontSize: fs(13),
+    color: '#64748B',
+    fontWeight: '500',
+    marginLeft: wp(10),
+  },
+  analysisValue: {
+    fontSize: fs(14),
+    fontWeight: '700',
+    color: '#1E293B',
   },
   feedbackCardSubmitted: {
     backgroundColor: '#E1F8ED',

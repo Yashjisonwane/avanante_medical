@@ -9,6 +9,7 @@ import {
   FlatList,
   Animated,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,7 +22,7 @@ import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors, Spacing } from '../../../constants/Theme';
 import { getHierarchyThunk, fetchDashboard } from '../../../redux/slices/courseSlice';
 import { fetchUnreadCount } from '../../../redux/slices/notificationSlice';
-import { setLanguage } from '../../../redux/slices/authSlice';
+import { setLanguage, fetchProfile } from '../../../redux/slices/authSlice';
 
 const LANGUAGES = [
   { code: 'en', label: 'English', nativeLabel: 'EN' },
@@ -43,7 +44,7 @@ const ModuleItem = ({ mod, chapters }) => {
         <View style={styles.modHeaderLeft}>
           <Ionicons name="layers" size={16} color={AppColors.success} />
           <Text style={styles.modTitle}>
-            {mod.module_title} 
+            {mod.module_title?.replace('Module', t('home.module', 'Module'))} 
             <Text style={styles.modSubLabel}> ({mod.completed_topics}/{mod.total_topics} {t('levels.topics', 'topics')})</Text>
           </Text>
         </View>
@@ -150,6 +151,7 @@ export default function HomeScreen() {
       dispatch(fetchDashboard());
       dispatch(getHierarchyThunk());
       dispatch(fetchUnreadCount());
+      dispatch(fetchProfile());
     }, [dispatch, currentLang])
   );
 
@@ -170,7 +172,9 @@ export default function HomeScreen() {
       {/* Header with Greeting */}
       <View style={[styles.header, { paddingTop: insets.top + hp(10) }]}>
         <View style={styles.headerContent}>
-          <Text style={styles.greetingText}>{getGreeting()}, {user?.name || 'Kajal Chrave'}</Text>
+          <Text style={styles.greetingText}>
+            {getGreeting()}, {user?.first_name ? `${user.first_name} ${user.last_name || ''}` : (user?.name || 'User')}
+          </Text>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.langBadge} onPress={() => setShowLanguageModal(true)}>
               <Text style={styles.langBadgeText}>{currentLang?.toUpperCase() || 'EN'}</Text>
@@ -200,8 +204,8 @@ export default function HomeScreen() {
             <Text style={styles.heroBadge}>
               {currentLearning.program?.title} • {currentLearning.level?.title}
             </Text>
-            <Text style={styles.heroModuleTitle}>{currentLearning.module?.title}</Text>
-            <Text style={styles.heroTopicTitle}>Current Topic: {currentLearning.topic?.title}</Text>
+            <Text style={styles.heroModuleTitle}>{currentLearning.module?.title?.replace('Module', t('home.module', 'Module'))}</Text>
+            <Text style={styles.heroTopicTitle}>{t('home.current_topic_label', 'Current Topic')}: {currentLearning.topic?.title?.replace('Topic', t('levels.topic', 'Topic'))}</Text>
             
             <View style={styles.heroProgressBarContainer}>
               <View style={[styles.heroProgressBar, { width: `${progressPercent}%` }]} />
@@ -214,12 +218,12 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.subProgressSection}>
-               <Text style={styles.subProgressTitle}>Current Topic Progress</Text>
+               <Text style={styles.subProgressTitle}>{t('home.current_topic_progress', 'Current Topic Progress')}</Text>
                <View style={styles.subProgressBarContainer}>
                  <View style={[styles.subProgressBar, { width: `${currentTopicProgress.progress_percent}%` }]} />
                </View>
                <Text style={styles.subProgressText}>
-                 {currentTopicProgress.read_contents}/{currentTopicProgress.total_contents} Contents Read
+                 {currentTopicProgress.read_contents}/{currentTopicProgress.total_contents} {t('home.contents_read', 'Contents Read')}
                </Text>
             </View>
 
@@ -372,13 +376,22 @@ export default function HomeScreen() {
                 <View style={[styles.upIcon, {backgroundColor: '#EFF6FF'}]}><Ionicons name="target" size={20} color={AppColors.primary} /></View>
                 <View style={{flex: 1}}>
                    <Text style={styles.upTitle}>{t('home.next', 'Next')}: {nextAction.topic.title}</Text>
-                   <Text style={styles.upSub}>{nextAction.type === 'quiz' ? 'Quiz' : t('levels.topic', 'Topic')} • Ready to start</Text>
+                   <Text style={styles.upSub}>{nextAction.type === 'quiz' ? t('home.quiz', 'Quiz') : t('levels.topic', 'Topic')} • {t('home.ready_to_start', 'Ready to start')}</Text>
                 </View>
                 <TouchableOpacity 
                   onPress={() => {
-                    const chapterId = nextAction.chapter?.id || nextAction.cta?.chapter_id;
+                    // Try to find chapter ID in multiple possible locations in the nextAction object
+                    const chapterId = 
+                      nextAction.chapter?.id || 
+                      nextAction.topic?.chapter_id || 
+                      nextAction.assessment?.chapter_id ||
+                      nextAction.cta?.chapter_id ||
+                      currentLearning.chapter?.id; // Final fallback to current learning
+
                     if (chapterId) {
                       router.push({ pathname: '/(tabs)/levels/chapter-details', params: { id: chapterId } });
+                    } else {
+                      router.push('/(tabs)/levels');
                     }
                   }}
                 >
@@ -395,9 +408,12 @@ export default function HomeScreen() {
                 </View>
                 <TouchableOpacity 
                   onPress={() => {
-                    const assessmentId = lastCert.passed_attempt_id || lastCert.certificate_id || lastCert.id;
+                    // Align with analytics report logic: use passed_attempt_id or id
+                    const assessmentId = lastCert.passed_attempt_id || lastCert.id || lastCert.assessment_id || lastCert.certificate_id;
                     if (assessmentId) {
                       router.push({ pathname: '/analytics/certificate', params: { assessmentId } });
+                    } else {
+                      Alert.alert(t('common.error'), 'Certificate information is incomplete.');
                     }
                   }}
                 >
@@ -427,9 +443,11 @@ export default function HomeScreen() {
               </View>
               <TouchableOpacity 
                 onPress={() => {
-                  const chapterId = data.last_session?.chapter_id || data.last_session?.chapter?.id;
+                  const chapterId = data.last_session?.chapter_id || data.last_session?.chapter?.id || currentLearning.chapter?.id;
                   if (chapterId) {
                     router.push({ pathname: '/(tabs)/levels/chapter-details', params: { id: chapterId } });
+                  } else {
+                    router.push('/(tabs)/levels');
                   }
                 }}
               >
@@ -455,7 +473,7 @@ export default function HomeScreen() {
       <Modal visible={showLanguageModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
            <View style={styles.modalContent}>
-              <Text style={styles.modalHeader}>Select Language</Text>
+              <Text style={styles.modalHeader}>{t('home.select_language', 'Select Language')}</Text>
               {LANGUAGES.map((l) => (
                 <TouchableOpacity key={l.code} style={styles.langRow} onPress={async () => {
                   await i18n.changeLanguage(l.code);
@@ -469,7 +487,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               ))}
               <TouchableOpacity style={styles.modalClose} onPress={() => setShowLanguageModal(false)}>
-                <Text style={{fontWeight: '700'}}>Close</Text>
+                <Text style={{fontWeight: '700'}}>{t('home.close', 'Close')}</Text>
               </TouchableOpacity>
            </View>
         </View>

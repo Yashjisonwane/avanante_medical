@@ -177,7 +177,6 @@ export default function ProfileScreen() {
         <View style={styles.menuSection}>
           <MenuItem icon="create-outline" label={t('profile.edit_profile')} onPress={() => router.push('/(tabs)/profile/edit-profile')} />
           <MenuItem icon="lock-closed-outline" label={t('profile.change_password')} onPress={() => router.push('/(tabs)/profile/change-password')} />
-          <MenuItem icon="notifications-outline" label={t('profile.notifications')} onPress={() => {}} />
           <MenuItem icon="log-out-outline" label={t('profile.logout')} isLogout={true} onPress={handleLogout} />
         </View>
 

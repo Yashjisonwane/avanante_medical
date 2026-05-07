@@ -43,7 +43,14 @@
     "thank_you": "Thank you!",
     "back_to_home": "Back to Home",
     "next": "Next",
-    "start": "Start"
+    "start": "Start",
+    "mobile": "Mobile Number",
+    "designation": "Designation",
+    "city": "City",
+    "success": "Success",
+    "error": "Error",
+    "missing_fields": "Required fields missing",
+    "permission_denied": "Permission Denied"
   },
   "auth": {
     "login_button": "Sign In",

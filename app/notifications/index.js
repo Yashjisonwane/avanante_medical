@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchNotifications, markAsRead, fetchUnreadCount } from '../../redux/slices/notificationSlice';
+import { fetchNotifications, markAsRead, fetchUnreadCount, markReadLocal } from '../../redux/slices/notificationSlice';
 import { wp, hp, ms, fs } from '../../utils/responsive';
 import { AppColors } from '../../constants/Theme';
 
@@ -23,14 +23,18 @@ export default function NotificationsScreen() {
   const { list, loading, pagination } = useSelector((state) => state.notifications);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    dispatch(fetchNotifications(1));
-  }, [dispatch]);
+  // Refetch notifications and unread count every time screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(fetchNotifications(1));
+      dispatch(fetchUnreadCount());
+    }, [dispatch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
     await dispatch(fetchNotifications(1));
-    dispatch(fetchUnreadCount());
+    await dispatch(fetchUnreadCount());
     setRefreshing(false);
   };
 
@@ -40,14 +44,13 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleNotificationClick = (item) => {
+  const handleNotificationClick = async (item) => {
     const isUnread = !(item.is_read === true || item.is_read == 1 || item.is_read === '1');
     if (isUnread) {
+      // 1. Update UI immediately (synchronous)
+      dispatch(markReadLocal(item.id));
+      // 2. Call API in background
       dispatch(markAsRead(item.id));
-      // Refetch count to ensure consistency across screens
-      setTimeout(() => {
-        dispatch(fetchUnreadCount());
-      }, 500);
     }
     router.push({
       pathname: `/notifications/${item.id}`,
@@ -56,7 +59,7 @@ export default function NotificationsScreen() {
         message: item.message,
         created_at: item.created_at,
         data: JSON.stringify(item.data),
-        is_read: item.is_read
+        is_read: '1'
       }
     });
   };

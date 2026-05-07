@@ -28,7 +28,7 @@ export const markAsRead = createAsyncThunk(
   async (id) => {
     const response = await apiRequest({
       endpoint: `/trainee/notifications/read/${id}`,
-      method: 'GET',
+      method: 'POST', // Changed from GET to POST as per project standard for mutations
     });
     return { id, response };
   }
@@ -51,6 +51,18 @@ const notificationSlice = createSlice({
     clearNotifications: (state) => {
       state.list = [];
       state.unreadCount = 0;
+    },
+    markReadLocal: (state, action) => {
+      const id = action.payload;
+      const index = state.list.findIndex((n) => n.id == id);
+      if (index !== -1) {
+        const item = state.list[index];
+        const wasUnread = !(item.is_read === true || item.is_read == 1 || item.is_read === '1');
+        if (wasUnread) {
+          state.list[index].is_read = 1;
+          state.unreadCount = Math.max(0, state.unreadCount - 1);
+        }
+      }
     },
   },
   extraReducers: (builder) => {
@@ -94,10 +106,14 @@ const notificationSlice = createSlice({
           // Robust check for unread status
           const wasUnread = !(item.is_read === true || item.is_read == 1 || item.is_read === '1');
           
-          if (action.payload.response?.data) {
-            state.list[index] = { ...state.list[index], ...action.payload.response.data };
+          if (action.payload.response?.data && typeof action.payload.response.data === 'object') {
+            state.list[index] = { 
+              ...state.list[index], 
+              ...action.payload.response.data,
+              is_read: 1 // Always force to read in local state
+            };
           } else {
-            state.list[index].is_read = 1; // Mark as read
+            state.list[index].is_read = 1;
           }
 
           if (wasUnread) {
@@ -108,5 +124,5 @@ const notificationSlice = createSlice({
   },
 });
 
-export const { clearNotifications } = notificationSlice.actions;
+export const { clearNotifications, markReadLocal } = notificationSlice.actions;
 export default notificationSlice.reducer;

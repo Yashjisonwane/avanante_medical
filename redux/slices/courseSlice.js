@@ -167,7 +167,10 @@ export const submitAssessmentFeedback = createAsyncThunk(
     return apiRequest({
       endpoint: `/trainee/assessments/${assessmentId}/feedback`,
       method: 'POST',
-      body: payload,
+      body: {
+        ...payload,
+        assessment_id: assessmentId, // Include in body too
+      },
     });
   }
 );
@@ -197,6 +200,7 @@ const initialState = {
     details: null,
     questions: [],
     currentAttemptId: null,
+    result: null,
     loading: false,
     error: null,
   },

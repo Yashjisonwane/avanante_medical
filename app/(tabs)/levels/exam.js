@@ -193,17 +193,18 @@ export default function ExamScreen() {
         {
           text: t('common.confirm', 'Submit'),
           onPress: async () => {
-            if (assessment.currentAttemptId) {
+            const currentId = assessment.currentAttemptId;
+            if (currentId) {
               setIsSubmitted(true);
               await dispatch(submitAssessment({
                 assessmentId: assessment_id,
-                attemptId: assessment.currentAttemptId
+                attemptId: currentId
               }));
               router.push({
                 pathname: '/(tabs)/levels/quiz-result',
                 params: { 
                   assessment_id: assessment_id,
-                  attempt_id: assessment.currentAttemptId
+                  attempt_id: currentId
                 }
               });
             }
@@ -318,18 +319,19 @@ export default function ExamScreen() {
               <TouchableOpacity 
                 style={styles.leaveSubmitBtn} 
                 onPress={async () => {
+                  const currentId = assessment.currentAttemptId;
                   setShowLeaveModal(false);
                   setIsSubmitted(true);
-                  if (assessment.currentAttemptId) {
+                  if (currentId) {
                     await dispatch(submitAssessment({
                       assessmentId: assessment_id,
-                      attemptId: assessment.currentAttemptId
+                      attemptId: currentId
                     }));
                     router.push({
                       pathname: '/(tabs)/levels/quiz-result',
                       params: { 
                         assessment_id: assessment_id,
-                        attempt_id: assessment.currentAttemptId
+                        attempt_id: currentId
                       }
                     });
                   } else {
@@ -369,18 +371,19 @@ export default function ExamScreen() {
               <TouchableOpacity 
                 style={styles.leaveSubmitBtn} 
                 onPress={async () => {
+                  const currentId = assessment.currentAttemptId;
                   setShowTimeExpiredModal(false);
                   setIsSubmitted(true);
-                  if (assessment.currentAttemptId) {
+                  if (currentId) {
                     await dispatch(submitAssessment({
                       assessmentId: assessment_id,
-                      attemptId: assessment.currentAttemptId
+                      attemptId: currentId
                     }));
                     router.push({
                       pathname: '/(tabs)/levels/quiz-result',
                       params: { 
                         assessment_id: assessment_id,
-                        attempt_id: assessment.currentAttemptId
+                        attempt_id: currentId
                       }
                     });
                   } else {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,9 @@ export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   
   const dispatch = useDispatch();
   const { actionLoading } = useSelector((state) => state.auth);
@@ -30,17 +33,18 @@ export default function ChangePasswordScreen() {
     
     try {
       const payload = {
-        current_password: currentPassword,
-        password: newPassword,
-        password_confirmation: confirmPassword
+        old_password: currentPassword,
+        new_password: newPassword,
+        new_password_confirmation: confirmPassword
       };
       
       const resultAction = await dispatch(changePassword(payload));
       if (changePassword.fulfilled.match(resultAction)) {
-        alert("Password updated successfully");
+        Alert.alert(t('common.success'), t('profile.password_updated') || "Password updated successfully");
         router.back();
       } else {
-        alert(resultAction.error?.message || "Failed to update password");
+        const errorMsg = resultAction.payload?.message || resultAction.error?.message || "Failed to update password";
+        Alert.alert(t('common.error'), errorMsg);
       }
     } catch (e) {
       console.error(e);
@@ -59,15 +63,53 @@ export default function ChangePasswordScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>{t('profile.current_password')}</Text>
-          <TextInput style={styles.fieldInput} placeholder={t('profile.current_password')} placeholderTextColor={AppColors.placeholder} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry={true} />
+          <View style={styles.inputWrapper}>
+            <TextInput 
+              style={styles.flexInput} 
+              placeholder={t('profile.current_password')} 
+              placeholderTextColor={AppColors.placeholder} 
+              value={currentPassword} 
+              onChangeText={setCurrentPassword} 
+              secureTextEntry={!showCurrent} 
+            />
+            <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)} style={styles.eyeIcon}>
+              <Ionicons name={showCurrent ? "eye-off-outline" : "eye-outline"} size={ms(20)} color={AppColors.placeholder} />
+            </TouchableOpacity>
+          </View>
         </View>
+
         <View style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>{t('profile.new_password')}</Text>
-          <TextInput style={styles.fieldInput} placeholder={t('profile.new_password')} placeholderTextColor={AppColors.placeholder} value={newPassword} onChangeText={setNewPassword} secureTextEntry={true} />
+          <View style={styles.inputWrapper}>
+            <TextInput 
+              style={styles.flexInput} 
+              placeholder={t('profile.new_password')} 
+              placeholderTextColor={AppColors.placeholder} 
+              value={newPassword} 
+              onChangeText={setNewPassword} 
+              secureTextEntry={!showNew} 
+            />
+            <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.eyeIcon}>
+              <Ionicons name={showNew ? "eye-off-outline" : "eye-outline"} size={ms(20)} color={AppColors.placeholder} />
+            </TouchableOpacity>
+          </View>
         </View>
+
         <View style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>{t('common.confirm_password')}</Text>
-          <TextInput style={styles.fieldInput} placeholder={t('common.confirm_password')} placeholderTextColor={AppColors.placeholder} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={true} />
+          <View style={styles.inputWrapper}>
+            <TextInput 
+              style={styles.flexInput} 
+              placeholder={t('common.confirm_password')} 
+              placeholderTextColor={AppColors.placeholder} 
+              value={confirmPassword} 
+              onChangeText={setConfirmPassword} 
+              secureTextEntry={!showConfirm} 
+            />
+            <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeIcon}>
+              <Ionicons name={showConfirm ? "eye-off-outline" : "eye-outline"} size={ms(20)} color={AppColors.placeholder} />
+            </TouchableOpacity>
+          </View>
         </View>
         <TouchableOpacity style={styles.updateBtn} onPress={handleUpdate} disabled={actionLoading.changePassword}>
           <Text style={styles.updateBtnText}>{actionLoading.changePassword ? 'Updating...' : t('common.update')}</Text>
@@ -89,7 +131,26 @@ const styles = StyleSheet.create({
   content: { padding: wp(20), paddingBottom: hp(40) },
   fieldContainer: { marginBottom: hp(20) },
   fieldLabel: { fontSize: fs(13), fontWeight: '600', color: AppColors.textSecondary, marginBottom: hp(8) },
-  fieldInput: { height: hp(52), backgroundColor: AppColors.backgroundWhite, borderRadius: ms(12), borderWidth: 1.5, borderColor: AppColors.border, paddingHorizontal: wp(16), fontSize: fs(14), color: AppColors.textDark, fontWeight: '500' },
+  inputWrapper: { 
+    height: hp(52), 
+    backgroundColor: AppColors.backgroundWhite, 
+    borderRadius: ms(12), 
+    borderWidth: 1.5, 
+    borderColor: AppColors.border, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: wp(16) 
+  },
+  flexInput: { 
+    flex: 1, 
+    height: '100%', 
+    fontSize: fs(14), 
+    color: AppColors.textDark, 
+    fontWeight: '500' 
+  },
+  eyeIcon: {
+    padding: ms(5),
+  },
   updateBtn: { height: hp(55), backgroundColor: AppColors.teal, borderRadius: ms(12), alignItems: 'center', justifyContent: 'center', marginTop: hp(15), elevation: 4, shadowColor: AppColors.teal, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
   updateBtnText: { color: AppColors.textWhite, fontSize: fs(17), fontWeight: '700' },
   footerSection: { alignItems: 'center', paddingBottom: hp(15), backgroundColor: AppColors.backgroundLight },

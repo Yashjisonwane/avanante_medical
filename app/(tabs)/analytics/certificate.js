@@ -99,7 +99,7 @@ export default function CertificateScreen() {
     courseName: data?.meta?.context?.title || data?.program || data?.course_name || 'N/A',
     score: `${data?.meta?.result?.score || data?.score || 0}/${data?.meta?.marks?.total_marks || data?.total_marks || 5}`,
     percent: `${data?.meta?.result?.percentage || data?.percentage || 0}%`,
-    status: (data?.meta?.result?.status || data?.certificate_status || data?.status || 'PASS').toUpperCase(),
+    status: String(data?.meta?.result?.status || data?.certificate_status || data?.status || 'PASS').toUpperCase(),
     timeTaken: data?.meta?.time?.time_taken_seconds ? `${Math.round(data.meta.time.time_taken_seconds)}s` : (data?.duration || data?.time_taken || 'N/A'),
     attempt: `#${data?.meta?.attempt?.attempt_id || data?.attempt || 1}`,
     date: (data?.issued_at || data?.certificate_issue_date || data?.issue_date) ? new Date(data?.issued_at || data?.certificate_issue_date || data?.issue_date).toLocaleDateString() : new Date().toLocaleDateString(),

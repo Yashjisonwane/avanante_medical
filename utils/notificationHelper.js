@@ -3,13 +3,18 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Suppress notification warnings in Expo Go for SDK 53+
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
+
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export async function registerForPushNotificationsAsync() {
   let token;
@@ -32,27 +37,39 @@ export async function registerForPushNotificationsAsync() {
     }
     if (finalStatus !== 'granted') {
       console.log('Failed to get push token for push notification!');
-      return;
+      return 'PERMISSION_NOT_GRANTED';
     }
-    // SDK 53+ and recent Expo Go versions don't support native FCM tokens in Expo Go.
-    // We check if we are running in Expo Go or a standalone build.
-    const isExpoGo = Device.brand === null || !Device.isDevice || (Platform.OS === 'android' && !Constants.appOwnership);
-    
+
+    // Get the project ID from constants
+    const projectId = 
+      Constants?.expoConfig?.extra?.eas?.projectId ?? 
+      Constants?.easConfig?.projectId;
+
+    if (!projectId) {
+      console.warn('Project ID not found in expoConfig. Make sure it is set in app.json.');
+    }
+
     try {
-      if (Constants.appOwnership === 'expo' || Constants.executionEnvironment === 'storeClient') {
-        // We are in Expo Go
-        token = (await Notifications.getExpoPushTokenAsync({
-          projectId: Constants.expoConfig?.extra?.eas?.projectId,
-        })).data;
-        console.log('Expo Go Push Token:', token);
-      } else {
-        // We are in a Standalone/Development Build
-        token = (await Notifications.getDevicePushTokenAsync()).data;
-        console.log('Native Device Push Token (FCM/APNs):', token);
-      }
+      // In SDK 51+, getExpoPushTokenAsync is the standard for both Expo Go and Development Builds
+      // if you want to use Expo's push service. 
+      // If you specifically need the raw FCM token for your own backend, use getDevicePushTokenAsync.
+      
+      const expoToken = await Notifications.getExpoPushTokenAsync({
+        projectId: projectId,
+      });
+      token = expoToken.data;
+      console.log('Expo Push Token:', token);
     } catch (e) {
-      console.warn('Error fetching push token:', e.message);
-      token = 'TOKEN_FETCH_ERROR';
+      console.warn('Error fetching Expo push token, trying device token:', e.message);
+      try {
+        // Fallback to device token (FCM/APNs)
+        const deviceToken = await Notifications.getDevicePushTokenAsync();
+        token = deviceToken.data;
+        console.log('Device Push Token:', token);
+      } catch (deviceErr) {
+        console.error('Error fetching device push token:', deviceErr.message);
+        token = 'TOKEN_FETCH_ERROR';
+      }
     }
   } else {
     console.log('Must use physical device for Push Notifications');

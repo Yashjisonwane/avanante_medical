@@ -43,7 +43,17 @@
     "thank_you": "धन्यवाद!",
     "back_to_home": "होम पर वापस जाएं",
     "next": "अगला",
-    "start": "शुरू करें"
+    "start": "शुरू करें",
+    "good_morning": "सुप्रभात",
+    "good_afternoon": "शुभ दोपहर",
+    "good_evening": "शुभ संध्या",
+    "mobile": "मोबाइल नंबर",
+    "designation": "पद",
+    "city": "शहर",
+    "success": "सफलता",
+    "error": "त्रुटि",
+    "missing_fields": "आवश्यक फ़ील्ड गायब हैं",
+    "permission_denied": "अनुमति अस्वीकार कर दी गई"
   },
   "auth": {
     "login_button": "साइन इन करें",
@@ -110,7 +120,14 @@
     "resume": "जारी रखें",
     "continue": "जारी रखें",
     "next": "अगला",
-    "cert_earned": "प्रमाणपत्र अर्जित किया"
+    "cert_earned": "प्रमाणपत्र अर्जित किया",
+    "current_topic_label": "वर्तमान विषय",
+    "current_topic_progress": "वर्तमान विषय की प्रगति",
+    "contents_read": "सामग्री पढ़ी गई",
+    "ready_to_start": "शुरू करने के लिए तैयार",
+    "quiz": "क्विज़",
+    "close": "बंद करें",
+    "module": "मॉड्यूल"
   },
   "analytics": {
     "learning_progress": "सीखने की प्रगति",
@@ -277,6 +294,7 @@
     "current_password": "वर्तमान पासवर्ड",
     "new_password": "नया पासवर्ड",
     "upload_photo": "फोटो अपलोड करें",
+    "change_photo": "फोटो बदलें",
     "choose_method": "अपनी फोटो अपलोड करने के लिए एक तरीका चुनें",
     "camera": "फोटो लें",
     "gallery": "गैलरी से चुनें"

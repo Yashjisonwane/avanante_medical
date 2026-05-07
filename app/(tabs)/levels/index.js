@@ -252,7 +252,7 @@ export default function LevelsScreen() {
                   stats={t('levels.stats_format', { hours: level.duration || 4.5, modules: modulesCount })} 
                   progress={progressPercentage} 
                   status={level.status || currentStatus} 
-                  badgeText={(level.status || currentStatus).toUpperCase()} 
+                  badgeText={String(level.status || currentStatus || '').toUpperCase()} 
                   buttonText={isCompleted ? t('levels.take_exam') : (isUnlocked ? t('levels.continue') : t('levels.start_level'))} 
                   buttonVariant={isCompleted ? 'primary' : (isUnlocked ? 'secondary' : 'locked')} 
                   locked={!isUnlocked}
