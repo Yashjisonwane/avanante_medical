@@ -106,10 +106,11 @@ export const getOrGenerateDeviceId = async () => {
 export const buildAuthHeaders = async (customHeaders = {}) => {
   const token = await loadAccessToken();
   const deviceId = await getOrGenerateDeviceId();
+  const language = i18n.language ? i18n.language.split('-')[0] : 'en';
   
   return {
     Accept: 'application/json',
-    'Accept-Language': i18n.language || 'en',
+    'Accept-Language': language,
     'X-Device-Id': deviceId,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...customHeaders,

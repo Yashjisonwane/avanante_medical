@@ -50,7 +50,10 @@
     "success": "Success",
     "error": "Error",
     "missing_fields": "Required fields missing",
-    "permission_denied": "Permission Denied"
+    "permission_denied": "Permission Denied",
+    "permission_camera_required": "Please grant camera permissions to upload a photo.",
+    "permission_gallery_required": "Please grant gallery permissions to upload a photo.",
+    "change_language": "Change Language"
   },
   "auth": {
     "login_button": "Sign In",
@@ -284,7 +287,9 @@
     "upload_photo": "Upload Photo",
     "choose_method": "Choose a method to upload your photo",
     "camera": "Take Photo",
-    "gallery": "Choose from Gallery"
+    "gallery": "Choose from Gallery",
+    "photo_updated": "Profile photo updated successfully!",
+    "photo_update_failed": "Failed to upload photo. Please try again."
   },
   "levels": {
     "all_levels": "All Levels",

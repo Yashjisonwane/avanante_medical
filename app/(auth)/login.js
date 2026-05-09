@@ -19,7 +19,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import i18n from '../../i18n';
-import { clearAuthMessages, loginUser } from '../../redux/slices/authSlice';
+import { clearAuthMessages, loginUser, setLanguage } from '../../redux/slices/authSlice';
 import * as Device from 'expo-device';
 import { registerForPushNotificationsAsync } from '../../utils/notificationHelper';
 
@@ -37,12 +37,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLangModalVisible, setIsLangModalVisible] = useState(false);
   const dispatch = useDispatch();
-  const { actionLoading, errorMessage } = useSelector((state) => state.auth);
+  const { actionLoading, errorMessage, language } = useSelector((state) => state.auth);
 
-  const currentLanguage = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
+  const currentLanguage = LANGUAGES.find(l => l.code === language) || LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
-  const changeLanguage = (code) => {
-    i18n.changeLanguage(code);
+  const changeLanguage = async (code) => {
+    await dispatch(setLanguage(code));
     setIsLangModalVisible(false);
   };
 

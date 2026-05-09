@@ -33,16 +33,17 @@ const normalizePayload = (payload = {}) =>
 export const hydrateAuth = createAsyncThunk('auth/hydrateAuth', async () => {
   const token = await loadAccessToken();
   const language = await AsyncStorage.getItem('user-language');
-  if (language) {
-    i18n.changeLanguage(language);
-  }
-  return { token, language: language || i18n.language };
+  const preferredLanguage = language || i18n.language || 'en';
+  const normalizedLanguage = preferredLanguage.split('-')[0];
+  await i18n.changeLanguage(normalizedLanguage);
+  return { token, language: normalizedLanguage };
 });
 
 export const setLanguage = createAsyncThunk('auth/setLanguage', async (language) => {
-  await AsyncStorage.setItem('user-language', language);
-  await i18n.changeLanguage(language);
-  return language;
+  const normalizedLanguage = language.split('-')[0];
+  await AsyncStorage.setItem('user-language', normalizedLanguage);
+  await i18n.changeLanguage(normalizedLanguage);
+  return normalizedLanguage;
 });
 
 export const loginUser = createAsyncThunk('auth/loginUser', async (payload) => {

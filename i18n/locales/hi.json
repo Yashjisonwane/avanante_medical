@@ -53,7 +53,10 @@
     "success": "सफलता",
     "error": "त्रुटि",
     "missing_fields": "आवश्यक फ़ील्ड गायब हैं",
-    "permission_denied": "अनुमति अस्वीकार कर दी गई"
+    "permission_denied": "अनुमति अस्वीकार कर दी गई",
+    "permission_camera_required": "कृपया फोटो अपलोड करने के लिए कैमरा अनुमति दें।",
+    "permission_gallery_required": "कृपया फोटो अपलोड करने के लिए गैलरी अनुमति दें।",
+    "change_language": "भाषा बदलें"
   },
   "auth": {
     "login_button": "साइन इन करें",
@@ -297,7 +300,9 @@
     "change_photo": "फोटो बदलें",
     "choose_method": "अपनी फोटो अपलोड करने के लिए एक तरीका चुनें",
     "camera": "फोटो लें",
-    "gallery": "गैलरी से चुनें"
+    "gallery": "गैलरी से चुनें",
+    "photo_updated": "प्रोफ़ाइल फोटो सफलतापूर्वक अपडेट हो गया!",
+    "photo_update_failed": "फोटो अपलोड विफल रहा। कृपया पुनः प्रयास करें।"
   },
   "levels": {
     "all_levels": "सभी स्तर",

@@ -62,6 +62,7 @@ export default function EditProfileScreen() {
     region: user?.region || '',
     city: user?.city || '',
     profile_image_uri: user?.avatar || user?.profile_image || '',
+    profile_image_asset: null, // Store full asset for upload
   });
 
   // Autofill form when user data is available
@@ -77,6 +78,7 @@ export default function EditProfileScreen() {
         region: user.region || '',
         city: user.city || '',
         profile_image_uri: user.avatar || user.profile_image || '',
+        profile_image_asset: null,
       });
     }
   }, [user]);
@@ -116,7 +118,11 @@ export default function EditProfileScreen() {
     });
 
     if (!result.canceled) {
-      updateForm('profile_image_uri', result.assets[0].uri);
+      setForm(prev => ({
+        ...prev,
+        profile_image_uri: result.assets[0].uri,
+        profile_image_asset: result.assets[0],
+      }));
     }
   };
 
@@ -130,19 +136,27 @@ export default function EditProfileScreen() {
       ...form,
     };
 
-    // Only include profile_image if it's a new local URI (starts with file:// or contains cache)
-    if (form.profile_image_uri && (form.profile_image_uri.startsWith('file://') || form.profile_image_uri.includes('ExponentExperienceData') || form.profile_image_uri.includes('ImagePicker'))) {
+    // Only include profile_image if it's a new local asset
+    if (form.profile_image_asset) {
+      const asset = form.profile_image_asset;
       const imgObj = {
-        uri: form.profile_image_uri,
-        name: 'profile.jpg',
-        type: 'image/jpeg',
+        uri: Platform.OS === 'android' ? asset.uri : asset.uri.replace('file://', ''),
+        name: asset.fileName || 'profile.jpg',
+        type: asset.mimeType || 'image/jpeg',
       };
+      
+      // Fix for Android file:// prefix if needed (though usually RN handles it)
+      if (Platform.OS === 'android' && !imgObj.uri.startsWith('file://') && !imgObj.uri.startsWith('content://')) {
+        imgObj.uri = `file://${imgObj.uri}`;
+      }
+
       payload.profile_image = imgObj;
-      payload.avatar = imgObj; // Send both for compatibility
+      payload.avatar = imgObj;
     }
     
-    // Clean up payload before sending
+    // Clean up payload
     delete payload.profile_image_uri;
+    delete payload.profile_image_asset;
 
     const resultAction = await dispatch(updateProfile(payload));
     if (updateProfile.fulfilled.match(resultAction)) {

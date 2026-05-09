@@ -8,6 +8,8 @@ import {
   Image,
   BackHandler,
   Alert,
+  Platform,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,8 +19,14 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
-import { logoutUser, fetchProfile, updateProfile } from '../../../redux/slices/authSlice';
+import { logoutUser, fetchProfile, updateProfile, setLanguage } from '../../../redux/slices/authSlice';
 import { formatImageUrl } from '../../../utils/imageUtils';
+
+const LANGUAGE_OPTIONS = [
+  { code: 'en', label: 'English', nativeLabel: 'English' },
+  { code: 'hi', label: 'Hindi', nativeLabel: 'हिंदी' },
+  { code: 'pa', label: 'Punjabi', nativeLabel: 'ਪੰਜਾਬੀ' },
+];
 
 const MenuItem = ({ icon, label, onPress, isLogout = false }) => (
   <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
@@ -38,7 +46,10 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const { user } = useSelector((state) => state.auth);
+  const { user, language } = useSelector((state) => state.auth);
+  const [languageModalVisible, setLanguageModalVisible] = React.useState(false);
+
+  const currentLanguage = LANGUAGE_OPTIONS.find((option) => option.code === language) || LANGUAGE_OPTIONS[0];
 
   React.useEffect(() => {
     dispatch(fetchProfile());
@@ -87,7 +98,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             const { status } = await ImagePicker.requestCameraPermissionsAsync();
             if (status !== 'granted') {
-              Alert.alert('Permission needed', 'Sorry, we need camera permissions to make this work!');
+              Alert.alert(t('common.permission_needed'), t('common.permission_camera_required'));
               return;
             }
             let result = await ImagePicker.launchCameraAsync({
@@ -105,7 +116,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-              Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to make this work!');
+              Alert.alert(t('common.permission_needed'), t('common.permission_gallery_required'));
               return;
             }
             let result = await ImagePicker.launchImageLibraryAsync({
@@ -128,20 +139,25 @@ export default function ProfileScreen() {
     try {
       setUploading(true);
       const fileObj = {
-        uri: asset.uri,
+        uri: Platform.OS === 'android' ? asset.uri : asset.uri.replace('file://', ''),
         name: asset.fileName || 'profile.jpg',
         type: asset.mimeType || 'image/jpeg',
       };
+      
+      // Fix for Android file:// prefix if needed
+      if (Platform.OS === 'android' && !fileObj.uri.startsWith('file://') && !fileObj.uri.startsWith('content://')) {
+        fileObj.uri = `file://${fileObj.uri}`;
+      }
       
       // Update the profile - sending both common keys just in case
       await dispatch(updateProfile({ avatar: fileObj, profile_image: fileObj })).unwrap();
       
       // Re-fetch profile to update UI immediately
       dispatch(fetchProfile());
-      Alert.alert('Success', 'Profile photo updated successfully!');
+      Alert.alert(t('common.success'), t('profile.photo_updated'));
     } catch (error) {
       console.log('Upload error', error);
-      Alert.alert('Error', 'Failed to upload photo. Please try again.');
+      Alert.alert(t('common.error'), t('profile.photo_update_failed'));
     } finally {
       setUploading(false);
     }
@@ -176,11 +192,33 @@ export default function ProfileScreen() {
         <View style={styles.divider} />
         <View style={styles.menuSection}>
           <MenuItem icon="create-outline" label={t('profile.edit_profile')} onPress={() => router.push('/(tabs)/profile/edit-profile')} />
+          <MenuItem icon="language-outline" label={t('common.change_language', 'Change Language')} onPress={() => setLanguageModalVisible(true)} />
           <MenuItem icon="lock-closed-outline" label={t('profile.change_password')} onPress={() => router.push('/(tabs)/profile/change-password')} />
           <MenuItem icon="log-out-outline" label={t('profile.logout')} isLogout={true} onPress={handleLogout} />
         </View>
 
       </ScrollView>
+
+      <Modal visible={languageModalVisible} transparent animationType="fade" onRequestClose={() => setLanguageModalVisible(false)}>
+        <TouchableOpacity style={modalStyles.overlay} activeOpacity={1} onPress={() => setLanguageModalVisible(false)}>
+          <View style={modalStyles.modalContent}>
+            <Text style={modalStyles.modalTitle}>{t('common.select_language')}</Text>
+            {LANGUAGE_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.code}
+                style={[modalStyles.modalItem, currentLanguage.code === option.code && modalStyles.modalItemActive]}
+                onPress={async () => {
+                  await dispatch(setLanguage(option.code));
+                  setLanguageModalVisible(false);
+                }}
+              >
+                <Text style={[modalStyles.modalItemText, currentLanguage.code === option.code && modalStyles.modalItemTextActive]}>{option.nativeLabel}</Text>
+                {currentLanguage.code === option.code && <Text style={modalStyles.modalCheck}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <View style={styles.footerSection}>
         <Text style={styles.footerText}>Avante Medical LMS v2.4.0</Text>
@@ -213,4 +251,52 @@ const styles = StyleSheet.create({
   menuLabelLogout: { color: AppColors.danger, fontWeight: '700' },
   footerSection: { alignItems: 'center', paddingBottom: hp(15), backgroundColor: AppColors.backgroundLight },
   footerText: { fontSize: fs(12), color: AppColors.placeholder, fontWeight: '500' },
+});
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: wp(20),
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: AppColors.backgroundWhite,
+    borderRadius: ms(20),
+    padding: wp(20),
+  },
+  modalTitle: {
+    fontSize: fs(16),
+    fontWeight: '700',
+    marginBottom: hp(15),
+    color: AppColors.textDark,
+    textAlign: 'center',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: hp(14),
+    paddingHorizontal: wp(10),
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.backgroundLight,
+  },
+  modalItemActive: {
+    backgroundColor: AppColors.backgroundLight,
+  },
+  modalItemText: {
+    fontSize: fs(15),
+    color: AppColors.textDark,
+  },
+  modalItemTextActive: {
+    color: AppColors.primary,
+    fontWeight: '700',
+  },
+  modalCheck: {
+    fontSize: fs(16),
+    color: AppColors.primary,
+    fontWeight: '700',
+  },
 });
