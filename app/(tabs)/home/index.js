@@ -411,7 +411,10 @@ export default function HomeScreen() {
                     // Align with analytics report logic: use passed_attempt_id or id
                     const assessmentId = lastCert.passed_attempt_id || lastCert.id || lastCert.assessment_id || lastCert.certificate_id;
                     if (assessmentId) {
-                      router.push({ pathname: '/analytics/certificate', params: { assessmentId } });
+                      router.push({
+                        pathname: '/(tabs)/analytics/certificate',
+                        params: { assessmentId, returnTo: '/(tabs)/home' }
+                      });
                     } else {
                       Alert.alert(t('common.error'), 'Certificate information is incomplete.');
                     }

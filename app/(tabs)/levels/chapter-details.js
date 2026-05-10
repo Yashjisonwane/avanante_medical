@@ -131,7 +131,7 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
           </TouchableOpacity>
         )}
 
-        {isUnlocked ? (
+        {isUnlocked && !(showQuizBtn && !isCompleted) ? (
           <TouchableOpacity
             style={[
               styles.actionButtonStart,

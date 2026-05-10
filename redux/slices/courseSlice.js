@@ -430,9 +430,14 @@ const courseSlice = createSlice({
         };
       })
       .addCase(submitAssessment.fulfilled, (state, action) => {
+        const response = action.payload.data || action.payload;
         state.assessment.currentAttemptId = null;
         state.assessment.questions = [];
-        state.assessment.result = action.payload.data || action.payload;
+        // Store assessment_id from details for feedback submission
+        state.assessment.result = {
+          ...response,
+          assessment_id: state.assessment.details?.assessment_id || response.assessment_id
+        };
       });
   },
 });
