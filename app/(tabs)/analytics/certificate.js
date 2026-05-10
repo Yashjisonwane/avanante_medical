@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,31 +18,70 @@ import { AppColors } from '../../../constants/Theme';
 import { apiRequest } from '../../../redux/api/baseApi';
 import { useDispatch, useSelector } from 'react-redux';
 import * as Linking from 'expo-linking';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { Share, Alert } from 'react-native';
 
 export default function CertificateScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
-  const { assessmentId } = useLocalSearchParams();
+  const { assessmentId, returnTo } = useLocalSearchParams();
   const { topicContent, currentTopic } = useSelector((state) => state.course);
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const certificateRef = useRef(null);
+
+  const handleGoBack = () => {
+    if (returnTo) {
+      router.replace(returnTo);
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/analytics');
+    }
+  };
   const { fetchProfile } = require('../../../redux/slices/authSlice');
   
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const fetchCertificate = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await apiRequest({
-          endpoint: `/trainee/reports/certificate/${assessmentId}`,
-          method: 'GET',
-        });
+        let response = null;
+        let lastError = null;
+
+        // Try multiple endpoint variations to find the certificate
+        const endpoints = [
+          `/trainee/reports/certificate/${assessmentId}`,
+          `/trainee/certificates/${assessmentId}`,
+          `/trainee/reports/certifications/${assessmentId}`,
+          `/trainee/assessment/${assessmentId}/certificate`,
+        ];
+
+        for (const endpoint of endpoints) {
+          try {
+            response = await apiRequest({
+              endpoint: endpoint,
+              method: 'GET',
+            });
+            if (response) {
+              break; // Success, exit loop
+            }
+          } catch (err) {
+            lastError = err;
+            continue; // Try next endpoint
+          }
+        }
+
+        if (!response) {
+          throw lastError || new Error('Certificate not found');
+        }
         
         const certData = response?.data || response;
         if (certData && typeof certData === 'object') {
@@ -51,7 +91,7 @@ export default function CertificateScreen() {
         }
       } catch (err) {
         console.error('Error fetching certificate:', err);
-        setError('Failed to load certificate details');
+        setError(err?.message || 'Failed to load certificate details');
       } finally {
         setLoading(false);
       }
@@ -85,7 +125,7 @@ export default function CertificateScreen() {
       <View style={styles.centerBox}>
         <Ionicons name="alert-circle-outline" size={ms(48)} color={AppColors.placeholder} />
         <Text style={styles.errorText}>{error || 'Certificate not found'}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.retryBtn} onPress={handleGoBack}>
           <Text style={styles.retryBtnText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -116,8 +156,43 @@ export default function CertificateScreen() {
     design: data?.design || {}
   };
 
-  const handleDownload = () => {
-    Alert.alert('Coming Soon', 'Certificate download feature will be available soon.');
+  const handleDownload = async () => {
+    try {
+      setDownloading(true);
+      Alert.alert('Downloading', 'Downloading your certificate...');
+      
+      const downloadUrl = `https://lms-backend.netswaptech.com/api/v1/trainee/reports/certificate/${assessmentId}/pdf`;
+      const filename = `${certificateData.certId || 'certificate'}.pdf`;
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+
+      // Download the file
+      const downloadResult = await FileSystem.downloadAsync(
+        downloadUrl,
+        fileUri
+      );
+
+      if (downloadResult.status === 200) {
+        // File downloaded successfully
+        Alert.alert('Download Complete', `Certificate saved as ${filename}`);
+        
+        // Share the file if sharing is available
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Share Certificate',
+            UTI: 'com.adobe.pdf',
+          });
+        }
+      } else {
+        Alert.alert('Download Failed', 'Failed to download certificate. Status: ' + downloadResult.status);
+      }
+      
+    } catch (error) {
+      console.error('Download failed:', error);
+      Alert.alert('Download Failed', error.message || 'Unable to download certificate. Please try again or contact support.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleShare = async () => {
@@ -141,7 +216,7 @@ export default function CertificateScreen() {
     <View style={styles.container}>
       {/* Header with Buttons */}
       <View style={[styles.header, { paddingTop: insets.top + hp(5) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtnCircle}>
+        <TouchableOpacity onPress={handleGoBack} style={styles.backBtnCircle}>
           <Ionicons name="chevron-back" size={24} color="#1E3A8A" />
         </TouchableOpacity>
         <View style={styles.headerLeft}>
@@ -165,7 +240,7 @@ export default function CertificateScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Certificate Frame */}
-        <View style={styles.certificateOuterFrame}>
+        <View ref={certificateRef} style={styles.certificateOuterFrame}>
           <View style={styles.certBody}>
             {/* Decorative Leaf Corners */}
             <View style={styles.leafCornerTopLeft}><Ionicons name="leaf-outline" size={ms(20)} color="#10B981" /></View>

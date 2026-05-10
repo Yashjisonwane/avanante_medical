@@ -71,6 +71,17 @@ export default function TabLayout() {
           },
           tabBarAllowFontScaling: false,
         }}
+        listeners={({ navigation, route }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            if (state) {
+              const homeState = state.routes.find(r => r.name === 'home/index');
+              if (homeState?.state?.index > 0) {
+                navigation.navigate(route.name, { screen: 'index', initial: true });
+              }
+            }
+          },
+        })}
       />
       <Tabs.Screen
         name="levels"
@@ -86,6 +97,17 @@ export default function TabLayout() {
           },
           tabBarAllowFontScaling: false,
         }}
+        listeners={({ navigation, route }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            if (state) {
+              const levelsState = state.routes.find(r => r.name === 'levels');
+              if (levelsState?.state?.index > 0) {
+                navigation.navigate(route.name, { screen: 'index', initial: true });
+              }
+            }
+          },
+        })}
       />
       <Tabs.Screen
         name="analytics"
@@ -101,6 +123,21 @@ export default function TabLayout() {
           },
           tabBarAllowFontScaling: false,
         }}
+        listeners={({ navigation, route }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            if (state) {
+              // If we're already on the analytics tab and deep in the stack, reset to index
+              const analyticsState = state.routes.find(r => r.name === 'analytics');
+              if (analyticsState?.state?.index > 0) {
+                navigation.navigate(route.name, {
+                  screen: 'index',
+                  initial: true,
+                });
+              }
+            }
+          },
+        })}
       />
       <Tabs.Screen
         name="assessment/index"
@@ -116,6 +153,17 @@ export default function TabLayout() {
           },
           tabBarAllowFontScaling: false,
         }}
+        listeners={({ navigation, route }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            if (state) {
+              const assessmentState = state.routes.find(r => r.name === 'assessment/index');
+              if (assessmentState?.state?.index > 0) {
+                navigation.navigate(route.name, { screen: 'index', initial: true });
+              }
+            }
+          },
+        })}
       />
       <Tabs.Screen
         name="profile"
@@ -131,6 +179,17 @@ export default function TabLayout() {
           },
           tabBarAllowFontScaling: false,
         }}
+        listeners={({ navigation, route }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            if (state) {
+              const profileState = state.routes.find(r => r.name === 'profile');
+              if (profileState?.state?.index > 0) {
+                navigation.navigate(route.name, { screen: 'index', initial: true });
+              }
+            }
+          },
+        })}
       />
     </Tabs>
   );

@@ -8,6 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,7 +19,8 @@ import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import CustomDropdown from '../../components/CustomDropdown';
 import * as ImagePicker from 'expo-image-picker';
-import { clearAuthMessages, registerUser, fetchRoles, fetchDesignations } from '../../redux/slices/authSlice';
+import i18n from '../../i18n';
+import { clearAuthMessages, registerUser, fetchRoles, fetchDesignations, setLanguage } from '../../redux/slices/authSlice';
 import { wp, hp, ms, fs } from '../../utils/responsive';
 import { Image } from 'react-native';
 
@@ -44,11 +47,25 @@ const COUNTRIES = [
   { id: 'NGA', name: 'Nigeria' },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
+const LANGUAGES = [
+  { code: 'en', label: 'English', native: 'English' },
+  { code: 'hi', label: 'Hindi', native: 'हिंदी' },
+  { code: 'pa', label: 'Punjabi', native: 'ਪੰਜਾਬੀ' },
+];
+
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const dispatch = useDispatch();
-  const { actionLoading, errorMessage } = useSelector((state) => state.auth);
+  const { actionLoading, errorMessage, language } = useSelector((state) => state.auth);
+  const [isLangModalVisible, setIsLangModalVisible] = useState(false);
+
+  const currentLanguage = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
+
+  const changeLanguage = async (code) => {
+    await dispatch(setLanguage(code));
+    setIsLangModalVisible(false);
+  };
 
   const [form, setForm] = useState({
     employee_id: '',
@@ -155,7 +172,14 @@ export default function OnboardingScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Employee Onboarding</Text>
+          <Text style={styles.headerTitle}>{t('auth.onboarding_button', 'Complete Employee Onboarding')}</Text>
+        </View>
+        <View style={styles.languageRow}>
+          <TouchableOpacity style={styles.languageSelector} onPress={() => setIsLangModalVisible(true)}>
+            <Text style={styles.languageText}>{t('common.select_language', 'Select Language')}:</Text>
+            <Text style={styles.languageValue}>{currentLanguage?.native || currentLanguage?.label}</Text>
+            <Text style={styles.dropdownIcon}> ▾</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -176,8 +200,8 @@ export default function OnboardingScreen() {
 
           <View style={styles.form}>
             <CustomInput
-              label="Full Name"
-              placeholder="e.g. John Doe"
+              label={t('common.full_name', 'Full Name')}
+              placeholder={t('common.full_name', 'Full Name')}
               value={form.name}
               onChangeText={(val) => updateForm('name', val)}
               leftIcon="person-outline"
@@ -185,8 +209,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomInput
-              label="Email Address"
-              placeholder="example@gmail.com"
+              label={t('common.email', 'Email Address')}
+              placeholder={t('auth.email_placeholder', 'example@gmail.com')}
               value={form.email}
               onChangeText={(val) => updateForm('email', val)}
               keyboardType="email-address"
@@ -195,8 +219,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomInput
-              label="Mobile Number"
-              placeholder="0000000000"
+              label={t('common.mobile', 'Mobile Number')}
+              placeholder={t('common.mobile', 'Mobile Number')}
               value={form.mobile}
               onChangeText={(val) => updateForm('mobile', val)}
               keyboardType="phone-pad"
@@ -205,8 +229,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomInput
-              label="Employee ID"
-              placeholder="Emp 123"
+              label={t('common.employee_id', 'Employee ID')}
+              placeholder={t('common.employee_id', 'Employee ID')}
               value={form.employee_id}
               onChangeText={(val) => updateForm('employee_id', val)}
               leftIcon="business-outline"
@@ -214,8 +238,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomDropdown
-              label="Designation"
-              placeholder={designations.length === 0 ? "Loading designations..." : "Select Designation"}
+              label={t('common.designation', 'Designation')}
+              placeholder={designations.length === 0 ? t('common.loading', 'Loading designations...') : t('common.select_designation', 'Select Designation')}
               options={designations}
               value={form.designation_id}
               onSelect={(val) => updateForm('designation_id', val)}
@@ -223,8 +247,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomDropdown
-              label="Region"
-              placeholder="Select Country"
+              label={t('common.region', 'Region')}
+              placeholder={t('common.select_country', 'Select Country')}
               options={COUNTRIES}
               value={form.region}
               onSelect={(val) => updateForm('region', val)}
@@ -232,8 +256,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomDropdown
-              label="Role"
-              placeholder="Select Role"
+              label={t('common.role', 'Role')}
+              placeholder={t('common.select_role', 'Select Role')}
               options={roles}
               value={form.role_id}
               onSelect={(val) => updateForm('role_id', val)}
@@ -241,8 +265,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomInput
-              label="City"
-              placeholder="indore"
+              label={t('common.city', 'City')}
+              placeholder={t('common.city', 'City')}
               value={form.city}
               onChangeText={(val) => updateForm('city', val)}
               leftIcon="location-outline"
@@ -250,8 +274,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomInput
-              label="Password"
-              placeholder="••••••"
+              label={t('common.password', 'Password')}
+              placeholder={t('common.password', 'Password')}
               value={form.password}
               onChangeText={(val) => updateForm('password', val)}
               secureTextEntry={true}
@@ -260,8 +284,8 @@ export default function OnboardingScreen() {
             />
 
             <CustomInput
-              label="Confirm Password"
-              placeholder="••••••"
+              label={t('common.confirm_password', 'Confirm Password')}
+              placeholder={t('common.confirm_password', 'Confirm Password')}
               value={form.password_confirmation}
               onChangeText={(val) => updateForm('password_confirmation', val)}
               secureTextEntry={true}
@@ -325,6 +349,46 @@ export default function OnboardingScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={isLangModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsLangModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setIsLangModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('common.select_language', 'Select Language')}</Text>
+            <FlatList
+              data={LANGUAGES}
+              keyExtractor={(item) => item.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.modalItem,
+                    i18n.language === item.code && styles.modalItemActive,
+                  ]}
+                  onPress={() => changeLanguage(item.code)}
+                >
+                  <Text style={[
+                    styles.modalItemText,
+                    i18n.language === item.code && styles.modalItemTextActive,
+                  ]}>
+                    {item.native} ({item.label})
+                  </Text>
+                  {i18n.language === item.code && (
+                    <Text style={styles.modalCheckIcon}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -419,6 +483,82 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     overflow: 'hidden',
+  },
+  languageRow: {
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 20,
+    backgroundColor: '#24458B',
+  },
+  languageSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  languageText: {
+    fontSize: 12,
+    color: '#F8FAFC',
+    marginRight: 6,
+  },
+  languageValue: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  dropdownIcon: {
+    fontSize: 12,
+    color: '#fff',
+    marginLeft: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalItemActive: {
+    backgroundColor: '#f9f9f9',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#444',
+  },
+  modalItemTextActive: {
+    color: '#24458B',
+    fontWeight: '600',
+  },
+  modalCheckIcon: {
+    fontSize: 18,
+    color: '#24458B',
+    fontWeight: '700',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    maxHeight: '50%',
   },
   avatar: {
     width: '100%',

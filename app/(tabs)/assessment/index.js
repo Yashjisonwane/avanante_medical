@@ -156,8 +156,11 @@ export default function AssessmentScreen() {
             <TouchableOpacity 
               style={styles.certificateBtn}
               onPress={() => router.push({
-                pathname: '/analytics/certificate',
-                params: { assessmentId: item?.passed_attempt_id || item?.id }
+                pathname: '/(tabs)/analytics/certificate',
+                params: { 
+                  assessmentId: item?.passed_attempt_id || item?.id,
+                  returnTo: '/(tabs)/assessment'
+                }
               })}
             >
               <Text style={styles.certificateBtnText}>{t('assessment.view_certificate', { defaultValue: 'View Certificate' })}</Text>

@@ -128,8 +128,8 @@ export default function CertificationReportScreen() {
             <TouchableOpacity 
               style={styles.actionBtn}
               onPress={() => router.push({
-                pathname: '/analytics/certificate',
-                params: { assessmentId: item?.passed_attempt_id || item?.id }
+                pathname: '/(tabs)/analytics/certificate',
+                params: { assessmentId: item?.passed_attempt_id || item?.id, returnTo: '/(tabs)/analytics' }
               })}
             >
               <Ionicons name="eye-outline" size={16} color="#fff" />

@@ -30,8 +30,8 @@ export default function QuizResultScreen() {
   const { result, details } = useSelector((state) => state.course.assessment);
   
   // Get IDs from params or Redux state
-  const assessment_id = params.assessment_id || details?.assessment_id || result?.assessment_id;
-  const attempt_id = params.attempt_id || result?.attempt_id || result?.id;
+  const assessment_id = params.assessment_id || result?.assessment_id || details?.assessment_id;
+  const attempt_id = params.attempt_id || result?.attempt_id;
 
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
@@ -71,19 +71,19 @@ export default function QuizResultScreen() {
     }
 
     try {
-      const result = await dispatch(submitAssessmentFeedback({
+      const feedbackResult = await dispatch(submitAssessmentFeedback({
         assessmentId: assessment_id,
         payload: {
           attempt_id: attempt_id,
           assessment_id: assessment_id,
           rating: rating,
-          review: review,
-          comment: review, // Fallback key
-          feedback: review // Fallback key
+          review: review || '',
+          comment: review || '',
+          feedback: review || ''
         }
       })).unwrap();
       setFeedbackSubmitted(true);
-      Alert.alert(t('common.success', 'Success'), result?.message || 'Feedback submitted successfully!');
+      Alert.alert(t('common.success', 'Success'), feedbackResult?.message || 'Feedback submitted successfully!');
     } catch (e) {
       console.log('Feedback Error:', e);
       const errorMsg = e?.message || e?.error || 'Failed to submit feedback. Please try again.';
@@ -376,23 +376,17 @@ export default function QuizResultScreen() {
               style={styles.homeBtn}
               onPress={() => {
                 dispatch(resetAssessment());
-                if (navigation.canGoBack()) {
-                  navigation.popToTop();
-                }
                 router.replace('/(tabs)/home');
               }}
             >
-               <Text style={styles.homeBtnText}>{t('common.back_to_home', 'Back to Home')}</Text>
+               <Text style={styles.homeBtnText}>{t('common.home', 'Home')}</Text>
             </TouchableOpacity>
 
          <TouchableOpacity 
            style={styles.retryBtn}
-           onPress={() => router.replace({
-             pathname: '/(tabs)/levels/exam',
-              params: { id: assessment_id }
-            })}
+           onPress={() => router.replace('/(tabs)/levels')}
           >
-             <Text style={styles.retryBtnText}>{t('exam.retry', 'Try Again')}</Text>
+             <Text style={styles.retryBtnText}>{t('common.my_levels', 'My Levels')}</Text>
           </TouchableOpacity>
       </View>
     </View>
