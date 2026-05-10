@@ -59,6 +59,10 @@ export default function LoginScreen() {
       let fcmToken = null;
       try {
         fcmToken = await registerForPushNotificationsAsync();
+        // Don't send placeholder error strings to backend as they trigger unique constraint errors
+        if (fcmToken === 'PERMISSION_NOT_GRANTED' || fcmToken === 'TOKEN_FETCH_ERROR' || fcmToken === 'SIMULATOR_NO_TOKEN') {
+          fcmToken = null;
+        }
       } catch (tokenErr) {
         console.warn('FCM Token error:', tokenErr.message);
       }
@@ -66,15 +70,22 @@ export default function LoginScreen() {
       const loginPayload = {
         email: trimmedEmail,
         password,
-        fcm_token: fcmToken || 'NO_TOKEN_AVAILABLE',
+        fcm_token: fcmToken,
         device_type: Platform.OS, // 'android' or 'ios'
       };
 
-      console.log('--- LOGIN PAYLOAD (DOCS VERSION) ---');
-      console.log(JSON.stringify(loginPayload, null, 2));
-      console.log('------------------------------------');
+      console.log('--- LOGIN ATTEMPT ---');
+      let action = await dispatch(loginUser(loginPayload));
 
-      const action = await dispatch(loginUser(loginPayload));
+      // Handle the "Duplicate entry" backend error specifically
+      const errorStr = action.error?.message || '';
+      if (loginUser.rejected.match(action) && errorStr.includes('Duplicate entry') && errorStr.includes('fcm_token')) {
+        console.log('Detected duplicate FCM token error, retrying login without token...');
+        
+        // Retry without token to allow the user to login
+        const retryPayload = { ...loginPayload, fcm_token: null };
+        action = await dispatch(loginUser(retryPayload));
+      }
 
       if (loginUser.fulfilled.match(action)) {
         dispatch(clearAuthMessages());

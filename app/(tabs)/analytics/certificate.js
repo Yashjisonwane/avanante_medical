@@ -15,10 +15,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
-import { apiRequest } from '../../../redux/api/baseApi';
+import { apiRequest, buildAuthHeaders } from '../../../redux/api/baseApi';
 import { useDispatch, useSelector } from 'react-redux';
 import * as Linking from 'expo-linking';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Share, Alert } from 'react-native';
 
@@ -47,6 +47,7 @@ export default function CertificateScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const [successEndpoint, setSuccessEndpoint] = useState('');
 
   useEffect(() => {
     const fetchCertificate = async () => {
@@ -71,6 +72,7 @@ export default function CertificateScreen() {
               method: 'GET',
             });
             if (response) {
+              setSuccessEndpoint(endpoint);
               break; // Success, exit loop
             }
           } catch (err) {
@@ -161,15 +163,45 @@ export default function CertificateScreen() {
       setDownloading(true);
       Alert.alert('Downloading', 'Downloading your certificate...');
       
-      const downloadUrl = `https://lms-backend.netswaptech.com/api/v1/trainee/reports/certificate/${assessmentId}/pdf`;
+      // Construct download URL based on the endpoint that worked for fetching
+      let downloadUrl = '';
+      const baseUrl = 'https://lms-backend.netswaptech.com/api/v1';
+      
+      if (successEndpoint) {
+        // Try to append /pdf to the endpoint that worked
+        downloadUrl = `${baseUrl}${successEndpoint}/pdf`;
+      } else {
+        // Fallback to a default pattern
+        downloadUrl = `${baseUrl}/trainee/reports/certificate/${assessmentId}/pdf`;
+      }
+
+      console.log('Attempting download from:', downloadUrl);
       const filename = `${certificateData.certId || 'certificate'}.pdf`;
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
+      // Get auth headers
+      const headers = await buildAuthHeaders();
+
       // Download the file
-      const downloadResult = await FileSystem.downloadAsync(
+      let downloadResult = await FileSystem.downloadAsync(
         downloadUrl,
-        fileUri
+        fileUri,
+        { headers }
       );
+
+      // If 404, try one more common pattern
+      if (downloadResult.status === 404) {
+        const altUrl = `${baseUrl}/trainee/certificates/${assessmentId}/pdf`;
+        console.log('404 encountered, trying alternative:', altUrl);
+        downloadResult = await FileSystem.downloadAsync(altUrl, fileUri, { headers });
+      }
+
+      // If still 404, try another one
+      if (downloadResult.status === 404) {
+        const altUrl2 = `${baseUrl}/trainee/reports/certificate/${certificateData.certId}/pdf`;
+        console.log('Still 404, trying string ID pattern:', altUrl2);
+        downloadResult = await FileSystem.downloadAsync(altUrl2, fileUri, { headers });
+      }
 
       if (downloadResult.status === 200) {
         // File downloaded successfully

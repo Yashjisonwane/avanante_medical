@@ -62,6 +62,7 @@ export default function ProfileScreen() {
     };
 
     const unsubscribeFocus = navigation.addListener('focus', () => {
+      dispatch(fetchProfile());
       backHandlerSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     });
 
@@ -138,16 +139,16 @@ export default function ProfileScreen() {
   const uploadPhoto = async (asset) => {
     try {
       setUploading(true);
-      const fileObj = {
-        uri: Platform.OS === 'android' ? asset.uri : asset.uri.replace('file://', ''),
-        name: asset.fileName || 'profile.jpg',
-        type: asset.mimeType || 'image/jpeg',
-      };
       
-      // Fix for Android file:// prefix if needed
-      if (Platform.OS === 'android' && !fileObj.uri.startsWith('file://') && !fileObj.uri.startsWith('content://')) {
-        fileObj.uri = `file://${fileObj.uri}`;
-      }
+      const fileUri = asset.uri;
+      const fileName = asset.fileName || fileUri.split('/').pop() || 'profile.jpg';
+      const fileType = asset.mimeType || (fileUri.endsWith('.png') ? 'image/png' : 'image/jpeg');
+
+      const fileObj = {
+        uri: Platform.OS === 'ios' ? fileUri.replace('file://', '') : fileUri,
+        name: fileName,
+        type: fileType,
+      };
       
       // Update the profile - sending both common keys just in case
       await dispatch(updateProfile({ avatar: fileObj, profile_image: fileObj })).unwrap();

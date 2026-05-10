@@ -144,7 +144,7 @@ export default function EditProfileScreen() {
         name: asset.fileName || 'profile.jpg',
         type: asset.mimeType || 'image/jpeg',
       };
-      
+
       // Fix for Android file:// prefix if needed (though usually RN handles it)
       if (Platform.OS === 'android' && !imgObj.uri.startsWith('file://') && !imgObj.uri.startsWith('content://')) {
         imgObj.uri = `file://${imgObj.uri}`;
@@ -153,7 +153,7 @@ export default function EditProfileScreen() {
       payload.profile_image = imgObj;
       payload.avatar = imgObj;
     }
-    
+
     // Clean up payload
     delete payload.profile_image_uri;
     delete payload.profile_image_asset;
@@ -180,10 +180,10 @@ export default function EditProfileScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView 
-          style={{ flex: 1 }} 
-          contentContainerStyle={styles.content} 
-          showsVerticalScrollIndicator={false} 
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.profileImageContainer}>
@@ -272,9 +272,9 @@ export default function EditProfileScreen() {
             leftIcon="location-outline"
           />
 
-          <TouchableOpacity 
-            style={[styles.saveBtn, actionLoading.updateProfile && { opacity: 0.7 }]} 
-            onPress={handleSave} 
+          <TouchableOpacity
+            style={[styles.saveBtn, actionLoading.updateProfile && { opacity: 0.7 }]}
+            onPress={handleSave}
             disabled={actionLoading.updateProfile}
           >
             <Text style={styles.saveBtnText}>
@@ -293,11 +293,11 @@ export default function EditProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppColors.backgroundLight },
-  header: { 
-    backgroundColor: AppColors.primary, 
-    paddingBottom: hp(14), 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  header: {
+    backgroundColor: AppColors.primary,
+    paddingBottom: hp(14),
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: wp(15),
     elevation: 4,
     shadowColor: '#000',
@@ -342,18 +342,18 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     elevation: 4,
   },
-  saveBtn: { 
-    height: hp(55), 
-    backgroundColor: AppColors.teal, 
-    borderRadius: ms(12), 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginTop: hp(20), 
-    elevation: 4, 
-    shadowColor: AppColors.teal, 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.3, 
-    shadowRadius: 8 
+  saveBtn: {
+    height: hp(55),
+    backgroundColor: AppColors.teal,
+    borderRadius: ms(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: hp(20),
+    elevation: 4,
+    shadowColor: AppColors.teal,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8
   },
   saveBtnText: { color: AppColors.textWhite, fontSize: fs(17), fontWeight: '700' },
   footerSection: { alignItems: 'center', paddingBottom: hp(15), backgroundColor: AppColors.backgroundLight },
