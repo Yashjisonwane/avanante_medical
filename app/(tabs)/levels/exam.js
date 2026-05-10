@@ -162,11 +162,11 @@ export default function ExamScreen() {
 
     // 1. Update local UI state immediately for instant feedback
     setSelectedOptionId(newOptionId);
-    
+
     // 2. Update Redux store so the answer persists when navigating prev/next
-    dispatch(updateQuestionAnswer({ 
-      questionId: currentQuestion.id, 
-      optionId: newOptionId 
+    dispatch(updateQuestionAnswer({
+      questionId: currentQuestion.id,
+      optionId: newOptionId
     }));
 
     // 3. Sync with backend
@@ -202,7 +202,7 @@ export default function ExamScreen() {
               }));
               router.push({
                 pathname: '/(tabs)/levels/quiz-result',
-                params: { 
+                params: {
                   assessment_id: assessment_id,
                   attempt_id: currentId
                 }
@@ -248,7 +248,7 @@ export default function ExamScreen() {
         <Text style={[styles.noQuestionsText, { color: '#E11D48', marginTop: hp(10), textAlign: 'center' }]}>
           {initError}
         </Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.leaveCancelBtn, { marginTop: hp(20), width: '80%', alignSelf: 'center' }]}
           onPress={() => router.back()}
         >
@@ -284,8 +284,8 @@ export default function ExamScreen() {
       <Modal visible={showLeaveModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.leaveModalContent}>
-            <TouchableOpacity 
-              style={styles.closeModalX} 
+            <TouchableOpacity
+              style={styles.closeModalX}
               onPress={() => setShowLeaveModal(false)}
             >
               <Ionicons name="close" size={ms(20)} color="#94A3B8" />
@@ -310,14 +310,14 @@ export default function ExamScreen() {
             </View>
 
             <View style={styles.leaveModalActions}>
-              <TouchableOpacity 
-                style={styles.leaveCancelBtn} 
+              <TouchableOpacity
+                style={styles.leaveCancelBtn}
                 onPress={() => setShowLeaveModal(false)}
               >
                 <Text style={styles.leaveCancelBtnText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.leaveSubmitBtn} 
+              <TouchableOpacity
+                style={styles.leaveSubmitBtn}
                 onPress={async () => {
                   const currentId = assessment.currentAttemptId;
                   setShowLeaveModal(false);
@@ -329,7 +329,7 @@ export default function ExamScreen() {
                     }));
                     router.push({
                       pathname: '/(tabs)/levels/quiz-result',
-                      params: { 
+                      params: {
                         assessment_id: assessment_id,
                         attempt_id: currentId
                       }
@@ -345,7 +345,7 @@ export default function ExamScreen() {
           </View>
         </View>
       </Modal>
-      
+
       {/* Time Expired Modal */}
       <Modal visible={showTimeExpiredModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -357,10 +357,10 @@ export default function ExamScreen() {
             <Text style={styles.leaveModalMessage}>
               {t('exam.time_expired_message', 'Your time for this assessment has ended. Your answers will be submitted automatically.')}
             </Text>
-            
+
             <View style={[styles.leaveModalActions, { marginTop: hp(20) }]}>
-              <TouchableOpacity 
-                style={styles.leaveCancelBtn} 
+              <TouchableOpacity
+                style={styles.leaveCancelBtn}
                 onPress={() => {
                   setShowTimeExpiredModal(false);
                   router.back();
@@ -368,8 +368,8 @@ export default function ExamScreen() {
               >
                 <Text style={styles.leaveCancelBtnText}>{t('exam.exit', 'Exit')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.leaveSubmitBtn} 
+              <TouchableOpacity
+                style={styles.leaveSubmitBtn}
                 onPress={async () => {
                   const currentId = assessment.currentAttemptId;
                   setShowTimeExpiredModal(false);
@@ -381,7 +381,7 @@ export default function ExamScreen() {
                     }));
                     router.push({
                       pathname: '/(tabs)/levels/quiz-result',
-                      params: { 
+                      params: {
                         assessment_id: assessment_id,
                         attempt_id: currentId
                       }
@@ -402,14 +402,14 @@ export default function ExamScreen() {
       <View style={[styles.detailsCard, { marginTop: insets.top + hp(10) }]}>
         <View style={styles.detailsHeader}>
           <View style={styles.detailsTitleContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backBtnSmall}
               onPress={() => setShowLeaveModal(true)}
             >
-               <Ionicons name="chevron-back" size={ms(20)} color="#3B82F6" />
+              <Ionicons name="chevron-back" size={ms(20)} color="#3B82F6" />
             </TouchableOpacity>
             <View style={styles.topicIconBg}>
-               <Ionicons name="book-outline" size={ms(18)} color="#3B82F6" />
+              <Ionicons name="book-outline" size={ms(18)} color="#3B82F6" />
             </View>
             <Text style={styles.detailsTitle}>{t('levels.topic_details', 'Topic Details')}</Text>
           </View>
@@ -431,20 +431,20 @@ export default function ExamScreen() {
 
         <View style={styles.detailsGrid}>
           <View style={styles.detailItem}>
-             <Ionicons name="information-circle-outline" size={ms(14)} color="#64748B" />
-             <Text style={styles.detailText}>{t('exam.duration', 'Duration')}: <Text style={styles.detailValue}>{assessment.details?.duration || 0} {t('common.min', 'minutes')}</Text></Text>
+            <Ionicons name="information-circle-outline" size={ms(14)} color="#64748B" />
+            <Text style={styles.detailText}>{t('exam.duration', 'Duration')}: <Text style={styles.detailValue}>{assessment.details?.duration || 0} {t('common.min', 'minutes')}</Text></Text>
           </View>
           <View style={styles.detailItem}>
-             <Ionicons name="time-outline" size={ms(14)} color="#64748B" />
-             <Text style={styles.detailText}>{t('exam.started_at', 'Started at')}: <Text style={styles.detailValue}>{assessment.details?.started_at ? new Date(assessment.details.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}</Text></Text>
+            <Ionicons name="time-outline" size={ms(14)} color="#64748B" />
+            <Text style={styles.detailText}>{t('exam.started_at', 'Started at')}: <Text style={styles.detailValue}>{assessment.details?.started_at ? new Date(assessment.details.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}</Text></Text>
           </View>
           <View style={styles.detailItem}>
-             <Ionicons name="time-outline" size={ms(14)} color="#64748B" />
-             <Text style={styles.detailText}>{t('exam.expires_at', 'Expires at')}: <Text style={styles.detailValue}>{assessment.details?.expires_at ? new Date(assessment.details.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}</Text></Text>
+            <Ionicons name="time-outline" size={ms(14)} color="#64748B" />
+            <Text style={styles.detailText}>{t('exam.expires_at', 'Expires at')}: <Text style={styles.detailValue}>{assessment.details?.expires_at ? new Date(assessment.details.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}</Text></Text>
           </View>
           <View style={styles.detailItem}>
-             <Ionicons name="help-circle-outline" size={ms(14)} color="#64748B" />
-             <Text style={styles.detailText}>{t('exam.attempt_id', 'Attempt ID')}: <Text style={styles.detailValue}>#{assessment.currentAttemptId}</Text></Text>
+            <Ionicons name="help-circle-outline" size={ms(14)} color="#64748B" />
+            <Text style={styles.detailText}>{t('exam.attempt_id', 'Attempt ID')}: <Text style={styles.detailValue}>#{assessment.currentAttemptId}</Text></Text>
           </View>
         </View>
       </View>
@@ -461,7 +461,7 @@ export default function ExamScreen() {
               <Text style={styles.progressText}>
                 {t('exam.question', 'Question')} <Text style={styles.activeQuestionText}>{currentQuestionIndex + 1}</Text> {t('exam.of', 'of')} {questions.length}
               </Text>
-              
+
               {selectedOptionId === null && currentQuestion.selected_option_id === null && (
                 <View style={styles.skippedBadge}>
                   <MaterialCommunityIcons name="fast-forward" size={ms(12)} color="#F97316" />
@@ -560,7 +560,7 @@ export default function ExamScreen() {
 
             <View style={styles.rightNavs}>
               <TouchableOpacity style={styles.navBtnSkip} onPress={handleSkip}>
-                <Ionicons name="play-skip-forward-outline" size={ms(18)} color="#64748B" style={{marginRight: 4}} />
+                <Ionicons name="play-skip-forward-outline" size={ms(18)} color="#64748B" style={{ marginRight: 4 }} />
                 <Text style={styles.navBtnSkipText}>{t('exam.skip', 'Skip')}</Text>
               </TouchableOpacity>
 
@@ -1054,5 +1054,14 @@ const styles = StyleSheet.create({
     fontSize: fs(14),
     fontWeight: '700',
     marginRight: wp(4),
+  },
+});
+minWidth: wp(90),
+  },
+navBtnNextText: {
+  color: '#fff',
+    fontSize: fs(14),
+      fontWeight: '700',
+        marginRight: wp(4),
   },
 });

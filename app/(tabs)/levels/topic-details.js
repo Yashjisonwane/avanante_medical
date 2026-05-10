@@ -114,7 +114,7 @@ export default function TopicDetailsScreen() {
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  
+
   const { topicContent, currentTopic, loading } = useSelector((state) => state.course);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -127,17 +127,17 @@ export default function TopicDetailsScreen() {
 
   const contentList = topicContent?.data || [];
   const totalContent = topicContent?.total || contentList.length;
-  
-  const isAllRead = contentList.length > 0 && contentList.every(item => 
+
+  const isAllRead = contentList.length > 0 && contentList.every(item =>
     item.is_read == 1 || item.is_read == true || item.is_read == 'true'
   );
 
   const topicData = currentTopic || {};
-  const assessmentId = topicData.assessment_id || 
-                       topicData.quiz_id || 
-                       (topicData.assessment && topicData.assessment.id) || 
-                       (topicData.quiz && topicData.quiz.id) || 
-                       (topicData.id && (topicData.assessment_id || topicData.quiz_id || topicData.assessment || topicData.quiz) ? topicData.id : null);
+  const assessmentId = topicData.assessment_id ||
+    topicData.quiz_id ||
+    (topicData.assessment && topicData.assessment.id) ||
+    (topicData.quiz && topicData.quiz.id) ||
+    (topicData.id && (topicData.assessment_id || topicData.quiz_id || topicData.assessment || topicData.quiz) ? topicData.id : null);
 
   // If we have a topic, but no explicit quiz ID, check if the topic itself can be a quiz
   // For safety, let's use the ID if we are sure it's intended to be a quiz
@@ -177,8 +177,8 @@ export default function TopicDetailsScreen() {
           <Text style={styles.emptySubtitle}>{t('levels.check_back_later', 'Check back later for new learning materials')}</Text>
         </View>
       ) : (
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent} 
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.gridContainer}>
@@ -186,14 +186,14 @@ export default function TopicDetailsScreen() {
               <ContentCard key={item.id?.toString() || index.toString()} item={item} topicId={id} />
             ))}
           </View>
-          
+
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
               {t('common.showing', 'Showing')} {contentList.length} {t('levels.of', 'of')} {totalContent} {t('levels.topics', 'topics')}
             </Text>
 
             {isAllRead && !(topicData.is_completed || topicData.is_passed) && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.quizBtn}
                 onPress={handleQuizPress}
                 activeOpacity={0.8}

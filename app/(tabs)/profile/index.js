@@ -87,6 +87,7 @@ export default function ProfileScreen() {
   };
 
   const [uploading, setUploading] = React.useState(false);
+  const [profileImageError, setProfileImageError] = React.useState(false);
 
   const handleImagePick = async () => {
     Alert.alert(
@@ -173,10 +174,23 @@ export default function ProfileScreen() {
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrapper}>
             <TouchableOpacity onPress={handleImagePick} disabled={uploading}>
-              <Image 
-                source={formatImageUrl(user?.avatar) || { uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
-                style={[styles.avatar, uploading && { opacity: 0.5 }]} 
-              />
+              {!profileImageError ? (
+                <Image 
+                  source={(() => {
+                    const src = formatImageUrl(user?.profile_image || user?.avatar || user?.profile_photo_url || user?.image);
+                    if (src && src.uri && !src.uri.startsWith('file') && !src.uri.startsWith('content')) {
+                      src.uri = `${src.uri}${src.uri.includes('?') ? '&' : '?'}t=${user?.updated_at || Date.now()}`;
+                    }
+                    return src || { uri: 'https://randomuser.me/api/portraits/men/32.jpg' };
+                  })()} 
+                  style={[styles.avatar, uploading && { opacity: 0.5 }]} 
+                  onError={() => setProfileImageError(true)}
+                />
+              ) : (
+                <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' }]}>
+                  <Ionicons name="person" size={ms(40)} color="#CBD5E1" />
+                </View>
+              )}
               <View style={styles.cameraBtn}>
                 <Ionicons name="camera" size={ms(14)} color={AppColors.textWhite} />
               </View>
