@@ -1056,12 +1056,3 @@ const styles = StyleSheet.create({
     marginRight: wp(4),
   },
 });
-minWidth: wp(90),
-  },
-navBtnNextText: {
-  color: '#fff',
-    fontSize: fs(14),
-      fontWeight: '700',
-        marginRight: wp(4),
-  },
-});

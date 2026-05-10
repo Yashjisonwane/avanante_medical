@@ -28,29 +28,35 @@ export const formatImageUrl = (image) => {
   if (imageUri.startsWith('http')) {
     let resolvedUri = imageUri;
     
-    // 1. Fix localhost/127.0.0.1 to production URL
+    // Fix localhost/127.0.0.1 to production URL
     if (resolvedUri.includes('localhost') || resolvedUri.includes('127.0.0.1')) {
       resolvedUri = resolvedUri.replace(/http:\/\/(localhost|127.0.0.1)(:\d+)?/, BACKEND_URL);
     }
     
-    // 2. Stripping '/public/' from URL (Common Laravel production issue)
-    // If the server returns '.../public/uploads/...' it often means the 'public' folder 
-    // is actually the root, so '/public' should not be in the URL.
-    if (resolvedUri.includes('/public/uploads/')) {
-      resolvedUri = resolvedUri.replace('/public/uploads/', '/uploads/');
-    }
+    // NOTE: We do NOT strip /public/ here because the user confirmed 
+    // that the URL WITH /public/ works in the web browser.
     
-    return { uri: resolvedUri };
+    return { 
+      uri: resolvedUri,
+      headers: {
+        Accept: 'image/*',
+      }
+    };
   }
 
   // Handle relative paths
-  const cleanPath = imageUri.startsWith('/') ? imageUri : `/${imageUri}`;
-  
-  // If the path starts with /public, strip it
-  let finalPath = cleanPath;
-  if (finalPath.startsWith('/public/')) {
-    finalPath = finalPath.replace('/public/', '/');
+  let finalPath = imageUri.trim();
+  if (!finalPath.startsWith('/')) {
+    finalPath = `/${finalPath}`;
   }
-
-  return { uri: `${BACKEND_URL}${finalPath}` };
+  
+  // For relative paths, we keep them as is since the backend seems to 
+  // expect the full path including /public if it's there.
+  
+  return { 
+    uri: `${BACKEND_URL}${finalPath}`,
+    headers: {
+      Accept: 'image/*',
+    }
+  };
 };

@@ -81,6 +81,11 @@ export default function ProfileScreen() {
     };
   }, [navigation]);
 
+  // Reset image error when user data changes
+  React.useEffect(() => {
+    setProfileImageError(false);
+  }, [user?.profile_image, user?.avatar]);
+
   const handleLogout = async () => {
     await dispatch(logoutUser());
     router.replace('/(auth)/login');
@@ -150,12 +155,12 @@ export default function ProfileScreen() {
         fileObj.uri = `file://${fileObj.uri}`;
       }
       
-      // Update the profile - sending both common keys just in case
-      await dispatch(updateProfile({ avatar: fileObj, profile_image: fileObj })).unwrap();
-      
-      // Re-fetch profile to update UI immediately
-      dispatch(fetchProfile());
-      Alert.alert(t('common.success'), t('profile.photo_updated'));
+      const payload = { avatar: fileObj, profile_image: fileObj };
+      const resultAction = await dispatch(updateProfile(payload));
+      if (updateProfile.fulfilled.match(resultAction)) {
+        await dispatch(fetchProfile());
+        Alert.alert(t('common.success'), t('profile.photo_updated'));
+      }
     } catch (error) {
       console.log('Upload error', error);
       Alert.alert(t('common.error'), t('profile.photo_update_failed'));
@@ -176,15 +181,29 @@ export default function ProfileScreen() {
             <TouchableOpacity onPress={handleImagePick} disabled={uploading}>
               {!profileImageError ? (
                 <Image 
+                  key={(() => {
+                    const imageUrl = user?.profile_image || user?.avatar || user?.profile_photo_url || user?.profile_photo || user?.photo || user?.avatar_url || user?.image_url || user?.image;
+                    return imageUrl ? String(imageUrl) : 'placeholder';
+                  })()}
                   source={(() => {
-                    const src = formatImageUrl(user?.profile_image || user?.avatar || user?.profile_photo_url || user?.image);
+                    const imageUrl = user?.profile_image || user?.avatar || user?.profile_photo_url || user?.profile_photo || user?.photo || user?.avatar_url || user?.image_url || user?.image;
+                    const src = formatImageUrl(imageUrl);
                     if (src && src.uri && !src.uri.startsWith('file') && !src.uri.startsWith('content')) {
-                      src.uri = `${src.uri}${src.uri.includes('?') ? '&' : '?'}t=${user?.updated_at || Date.now()}`;
+                      // Add robust cache busting
+                      const timestamp = (user?.updated_at && !isNaN(new Date(user.updated_at).getTime())) 
+                        ? new Date(user.updated_at).getTime() 
+                        : Date.now();
+                      src.uri = `${src.uri}${src.uri.includes('?') ? '&' : '?'}cache=${timestamp}`;
+                      return src;
                     }
-                    return src || { uri: 'https://randomuser.me/api/portraits/men/32.jpg' };
+                    // Fallback if no valid image URL
+                    return null;
                   })()} 
                   style={[styles.avatar, uploading && { opacity: 0.5 }]} 
-                  onError={() => setProfileImageError(true)}
+                  onError={(e) => {
+                    console.log("Image load error for:", user?.profile_image || user?.avatar, e.nativeEvent.error);
+                    setProfileImageError(true);
+                  }}
                 />
               ) : (
                 <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' }]}>
