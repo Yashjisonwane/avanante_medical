@@ -71,8 +71,18 @@ export default function CertificationReportScreen() {
     const score = item?.score || item?.obtained_marks || '0';
     const total = item?.total_marks || item?.max_marks || '100';
     const percentage = item?.percentage || item?.percent || '0';
-    const issueDate = item?.certificate_issue_date || item?.issue_date || item?.created_at;
-    const formattedDate = issueDate ? new Date(issueDate).toLocaleDateString() : 'N/A';
+    const rawDate = 
+      item?.certificate_issue_date || 
+      item?.issue_date || 
+      item?.created_at || 
+      item?.updated_at || 
+      item?.passed_at || 
+      item?.completed_at ||
+      item?.meta?.time?.submitted_at ||
+      item?.meta?.submitted_at ||
+      item?.assessment?.created_at ||
+      item?.date;
+    const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString() : 'N/A';
     const status = item?.certificate_status || item?.status || 'Active';
     const isAvailable = item?.is_available ?? true;
 

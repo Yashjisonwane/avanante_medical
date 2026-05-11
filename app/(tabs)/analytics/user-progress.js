@@ -69,7 +69,9 @@ export default function UserProgressScreen() {
     const progress = Number(item?.completion_percentage ?? item?.progress ?? item?.completion_percent ?? 0);
     const status = item?.completion_status || item?.status || (progress === 100 ? 'Completed' : 'In Progress');
     const isCompleted = status.toLowerCase() === 'completed' || item?.is_completed == true;
-    const date = (item?.last_activity_date || item?.updated_at || item?.created_at) ? new Date(item.last_activity_date || item.updated_at || item.created_at).toLocaleDateString() : 'N/A';
+    const date = (item?.last_activity_date || item?.updated_at || item?.created_at || item?.date || item?.completed_at || item?.meta?.time?.submitted_at) 
+      ? new Date(item.last_activity_date || item.updated_at || item.created_at || item.date || item.completed_at || item.meta.time.submitted_at).toLocaleDateString() 
+      : 'N/A';
 
     return (
       <View style={styles.card}>

@@ -124,25 +124,25 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
           <Text style={[styles.actionButtonFAQText, !isUnlocked && { color: '#94A3B8' }]}>{t('levels.faq', 'FAQ')}</Text>
         </TouchableOpacity>
 
-        {isUnlocked && showQuizBtn && !isCompleted && (
-          <TouchableOpacity style={styles.actionButtonQuiz} onPress={handleQuizPress}>
-            <Ionicons name="help-circle" size={ms(12)} color="#fff" style={{ marginRight: wp(4) }} />
-            <Text style={styles.actionButtonQuizText}>{t('levels.give_quiz', 'Give Quiz')}</Text>
-          </TouchableOpacity>
-        )}
-
-        {isUnlocked && !(showQuizBtn && !isCompleted) ? (
-          <TouchableOpacity
-            style={[
-              styles.actionButtonStart,
-              isCompleted && { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' }
-            ]}
-            onPress={handlePress}
-          >
-            <Text style={[styles.actionButtonStartText, isCompleted && { color: '#2563EB' }]}>
-              {isCompleted ? t('common.view', 'View') : t('levels.continue', 'Continue')}
-            </Text>
-          </TouchableOpacity>
+        {isUnlocked ? (
+          showQuizBtn && !isCompleted ? (
+            <TouchableOpacity style={styles.actionButtonQuiz} onPress={handleQuizPress}>
+              <Ionicons name="help-circle" size={ms(12)} color="#fff" style={{ marginRight: wp(4) }} />
+              <Text style={styles.actionButtonQuizText}>{t('levels.give_quiz', 'Give Quiz')}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.actionButtonStart,
+                isCompleted && { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' }
+              ]}
+              onPress={handlePress}
+            >
+              <Text style={[styles.actionButtonStartText, isCompleted && { color: '#2563EB' }]}>
+                {isCompleted ? t('common.view', 'View') : t('levels.continue', 'Continue')}
+              </Text>
+            </TouchableOpacity>
+          )
         ) : (
           <View style={styles.actionButtonLocked}>
             <Ionicons name="lock-closed" size={ms(12)} color="#64748B" style={{ marginRight: wp(4) }} />

@@ -58,22 +58,87 @@ export default function AssessmentScreen() {
     if (!item) return null;
     
     // Data Extraction
+    // Data Extraction
     const assessment = item?.assessment || {};
     const title = String(assessment?.title || item?.title || 'Assessment');
-    const score = Number(item?.marks_obtained ?? item?.score ?? 0);
-    const total = Number(assessment?.total_marks ?? item?.total_marks ?? 100);
-    const percentage = total > 0 ? ((score / total) * 100).toFixed(2) : '0.00';
+    
+    // DEBUG: Log the item to see the API structure
+    // console.log('Assessment Item:', JSON.stringify(item));
+
+    // Correctly extract counts based on the API response structure
+    // We prioritize "count" fields and avoid "marks" or "score" for these specific labels
+    const correct = Number(
+      item?.correct_answers_count ?? 
+      item?.correct_answer_count ??
+      item?.correct_answers ?? 
+      item?.correct_answer ??
+      item?.correct_count ?? 
+      item?.correct ?? 
+      item?.meta?.questions?.correct_answers ??
+      item?.meta?.questions?.correct ??
+      assessment?.correct_answers_count ??
+      assessment?.correct_answers ??
+      0
+    );
+    
+    const total = Number(
+      item?.total_questions_count ?? 
+      item?.total_questions ?? 
+      item?.questions_count ??
+      item?.total_count ?? 
+      item?.total_question ??
+      item?.total ?? 
+      assessment?.total_questions_count ??
+      assessment?.total_questions ?? 
+      assessment?.questions_count ??
+      5
+    );
+    
+    const scorePoints = Number(item?.marks_obtained ?? item?.score ?? item?.obtained_marks ?? 0);
+    const totalPoints = Number(assessment?.total_marks ?? item?.total_marks ?? 100);
+    
+    const percentage = totalPoints > 0 ? ((scorePoints / totalPoints) * 100).toFixed(2) : '0.00';
     
     const status = String(item?.status || 'FAILED').toUpperCase();
     const isPassed = status === 'PASSED' || status === 'COMPLETED';
     const isInProgress = status === 'IN_PROGRESS';
     
-    const correct = item?.correct_answers_count ?? 0;
-    const incorrect = item?.wrong_answers_count ?? 0;
-    const skipped = item?.skipped_questions_count ?? 0;
+    const incorrect = item?.wrong_answers_count ?? item?.wrong_answers ?? item?.wrong_count ?? item?.wrong_answer ?? item?.wrong ?? item?.incorrect ?? item?.meta?.questions?.wrong_answers ?? item?.meta?.questions?.wrong ?? assessment?.wrong_answers_count ?? 0;
+    const skipped = item?.skipped_questions_count ?? item?.skipped_questions ?? item?.skipped_count ?? item?.skipped_question ?? item?.skipped ?? item?.meta?.questions?.skipped_questions ?? item?.meta?.questions?.skipped ?? assessment?.skipped_questions_count ?? 0;
     
     const attempt = item?.attempt_number || 1;
-    const date = item?.created_at ? new Date(item.created_at).toLocaleString() : 'N/A';
+    
+    // Robust Date Extraction
+    const rawDate = 
+      item?.created_at || 
+      item?.updated_at || 
+      item?.completed_at || 
+      item?.date || 
+      item?.last_activity_date ||
+      item?.meta?.time?.submitted_at ||
+      item?.meta?.submitted_at ||
+      item?.meta?.date ||
+      item?.meta?.created_at ||
+      item?.meta?.time?.created_at ||
+      item?.assessment?.created_at ||
+      item?.assessment?.updated_at;
+
+    const getFormattedDate = (val) => {
+      if (!val) return 'N/A';
+      try {
+        let d = new Date(val);
+        // Handle Unix Timestamps (seconds)
+        if (typeof val === 'number' && val < 2000000000) {
+          d = new Date(val * 1000);
+        }
+        if (isNaN(d.getTime())) return 'N/A';
+        return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return 'N/A';
+      }
+    };
+
+    const date = getFormattedDate(rawDate);
     
     const trainee = item?.trainee || {};
     const userName = trainee?.name || 'User';
@@ -99,7 +164,7 @@ export default function AssessmentScreen() {
         <View style={styles.cardSection}>
           <View style={styles.statsBox}>
             <Text style={styles.infoLabel}>{t('assessment.score_percent', { defaultValue: 'Score / Percentage' })}</Text>
-            <Text style={styles.scoreValue}>{score} / {total}</Text>
+            <Text style={styles.scoreValue}>{correct} / {total}</Text>
             <Text style={styles.percentValue}>{percentage}%</Text>
           </View>
           <View style={styles.statusBox}>

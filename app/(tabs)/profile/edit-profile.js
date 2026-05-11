@@ -16,9 +16,10 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import * as ImagePicker from 'expo-image-picker';
-import { updateProfile, fetchRoles, fetchDesignations, clearAuthMessages } from '../../../redux/slices/authSlice';
+import { updateProfile, fetchRoles, fetchDesignations, clearAuthMessages, fetchProfile } from '../../../redux/slices/authSlice';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
+import { formatImageUrl } from '../../../utils/imageUtils';
 import CustomInput from '../../../components/CustomInput';
 import CustomDropdown from '../../../components/CustomDropdown';
 
@@ -61,9 +62,10 @@ export default function EditProfileScreen() {
     role_id: user?.role_id || '',
     region: user?.region || '',
     city: user?.city || '',
-    profile_image_uri: user?.avatar || user?.profile_image || '',
+    profile_image_uri: user?.profile_image || user?.avatar || user?.profile_photo_url || user?.profile_photo || user?.photo || user?.avatar_url || user?.image_url || user?.image || '',
     profile_image_asset: null, // Store full asset for upload
   });
+  const [profileImageError, setProfileImageError] = useState(false);
 
   // Autofill form when user data is available
   useEffect(() => {
@@ -77,7 +79,7 @@ export default function EditProfileScreen() {
         role_id: user.role_id || '',
         region: user.region || '',
         city: user.city || '',
-        profile_image_uri: user.avatar || user.profile_image || '',
+        profile_image_uri: user.profile_image || user.avatar || user.profile_photo_url || user.profile_photo || user.photo || user.avatar_url || user.image_url || user.image || '',
         profile_image_asset: null,
       });
     }
@@ -132,11 +134,19 @@ export default function EditProfileScreen() {
       return;
     }
 
-    const payload = {
-      ...form,
+    // Fields the backend supports based on the response JSON provided
+    const supportedPayload = {
+      name: form.name,
+      email: form.email,
+      mobile: form.mobile,
+      region: form.region,
+      city: form.city,
+      designation_id: form.designation_id,
+      employee_id: form.employee_id,
+      role_id: form.role_id,
     };
 
-    // Only include profile_image if it's a new local asset
+    // Add image if present
     if (form.profile_image_asset) {
       const asset = form.profile_image_asset;
       const imgObj = {
@@ -146,22 +156,20 @@ export default function EditProfileScreen() {
       };
 
       // Fix for Android file:// prefix if needed (though usually RN handles it)
+
       if (Platform.OS === 'android' && !imgObj.uri.startsWith('file://') && !imgObj.uri.startsWith('content://')) {
         imgObj.uri = `file://${imgObj.uri}`;
       }
 
-      payload.profile_image = imgObj;
-      payload.avatar = imgObj;
+      supportedPayload.profile_image = imgObj;
+      supportedPayload.avatar = imgObj;
     }
 
-    // Clean up payload
-    delete payload.profile_image_uri;
-    delete payload.profile_image_asset;
 
-    const resultAction = await dispatch(updateProfile(payload));
+    const resultAction = await dispatch(updateProfile(supportedPayload));
     if (updateProfile.fulfilled.match(resultAction)) {
-      const { fetchProfile } = require('../../../redux/slices/authSlice');
-      dispatch(fetchProfile()); // Refresh profile data
+      // Re-fetch profile to update global state and ensure sync
+      await dispatch(fetchProfile());
       router.back();
     }
   };
@@ -186,17 +194,40 @@ export default function EditProfileScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.profileImageContainer}>
+          <View style={styles.avatarSection}>
             <View style={styles.avatarWrapper}>
-              <TouchableOpacity onPress={pickImage} activeOpacity={0.9}>
-                {form.profile_image_uri ? (
-                  <Image source={{ uri: form.profile_image_uri }} style={styles.avatar} />
+              <TouchableOpacity onPress={pickImage}>
+                {!profileImageError ? (
+                  <Image 
+                    key={(() => {
+                      const imageUrl = form.profile_image_uri || user?.profile_image || user?.avatar || user?.profile_photo_url || user?.profile_photo || user?.photo || user?.avatar_url || user?.image_url || user?.image;
+                      return imageUrl ? String(imageUrl) : 'placeholder';
+                    })()}
+                    source={(() => {
+                      const imageUrl = form.profile_image_uri || user?.profile_image || user?.avatar || user?.profile_photo_url || user?.profile_photo || user?.photo || user?.avatar_url || user?.image_url || user?.image;
+                      const src = formatImageUrl(imageUrl);
+                      if (src && src.uri && !src.uri.startsWith('file') && !src.uri.startsWith('content')) {
+                        // Add robust cache busting
+                        const timestamp = (user?.updated_at && !isNaN(new Date(user.updated_at).getTime())) 
+                          ? new Date(user.updated_at).getTime() 
+                          : Date.now();
+                        src.uri = `${src.uri}${src.uri.includes('?') ? '&' : '?'}cache=${timestamp}`;
+                        return src;
+                      }
+                      return src;
+                    })()} 
+                    style={styles.avatar} 
+                    onError={(e) => {
+                      console.log("Edit Profile Image Load Error:", e.nativeEvent.error);
+                      setProfileImageError(true);
+                    }}
+                  />
                 ) : (
                   <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' }]}>
                     <Ionicons name="person" size={ms(40)} color="#CBD5E1" />
                   </View>
                 )}
-                <View style={styles.cameraOverlay}>
+                <View style={styles.cameraBtn}>
                   <Ionicons name="camera" size={ms(14)} color="#fff" />
                 </View>
               </TouchableOpacity>
@@ -308,27 +339,30 @@ const styles = StyleSheet.create({
   backBtn: { width: wp(40), height: wp(40), borderRadius: wp(20), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', color: AppColors.textWhite, fontSize: fs(18), fontWeight: '700' },
   content: { padding: wp(20), paddingBottom: hp(40) },
-  profileImageContainer: {
+  avatarSection: {
     alignItems: 'center',
     marginBottom: hp(25),
   },
   avatarWrapper: {
-    width: ms(90),
-    height: ms(90),
-    borderRadius: ms(45),
+    width: ms(100),
+    height: ms(100),
+    borderRadius: ms(50),
+    borderWidth: 4,
+    borderColor: '#F8FAFC',
     backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: AppColors.border,
-    overflow: 'hidden',
-    marginBottom: hp(12),
+    marginBottom: hp(15),
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   avatar: {
     width: '100%',
     height: '100%',
+    borderRadius: ms(50),
   },
-  cameraOverlay: {
+  cameraBtn: {
     position: 'absolute',
     bottom: 0,
     right: 0,

@@ -10,19 +10,53 @@ const BACKEND_URL = 'https://lms-backend.netswaptech.com';
 export const formatImageUrl = (image) => {
   if (!image) return null;
   
-  if (typeof image === 'number') {
-    return image; // Handled by require()
-  }
-  
+  let imageUri = '';
   if (typeof image === 'string') {
-    if (image.startsWith('http://') || image.startsWith('https://')) {
-      return { uri: image };
+    imageUri = image;
+  } else if (typeof image === 'object') {
+    imageUri = image.uri || image.url || image.path || '';
+  }
+
+  if (!imageUri) return null;
+
+  // Handle local files or already formatted data
+  if (imageUri.startsWith('file') || imageUri.startsWith('content') || imageUri.startsWith('data:')) {
+    return { uri: imageUri };
+  }
+
+  // Handle absolute URLs
+  if (imageUri.startsWith('http')) {
+    let resolvedUri = imageUri;
+    
+    // Fix localhost/127.0.0.1 to production URL
+    if (resolvedUri.includes('localhost') || resolvedUri.includes('127.0.0.1')) {
+      resolvedUri = resolvedUri.replace(/http:\/\/(localhost|127.0.0.1)(:\d+)?/, BACKEND_URL);
     }
     
-    // Prefix with backend URL if it's a relative path
-    const cleanPath = image.startsWith('/') ? image : `/${image}`;
-    return { uri: `${BACKEND_URL}${cleanPath}` };
+    // NOTE: We do NOT strip /public/ here because the user confirmed 
+    // that the URL WITH /public/ works in the web browser.
+    
+    return { 
+      uri: resolvedUri,
+      headers: {
+        Accept: 'image/*',
+      }
+    };
+  }
+
+  // Handle relative paths
+  let finalPath = imageUri.trim();
+  if (!finalPath.startsWith('/')) {
+    finalPath = `/${finalPath}`;
   }
   
-  return image;
+  // For relative paths, we keep them as is since the backend seems to 
+  // expect the full path including /public if it's there.
+  
+  return { 
+    uri: `${BACKEND_URL}${finalPath}`,
+    headers: {
+      Accept: 'image/*',
+    }
+  };
 };

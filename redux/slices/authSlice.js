@@ -104,7 +104,23 @@ export const fetchProfile = createAsyncThunk('auth/fetchProfile', async () =>
 );
 
 export const updateProfile = createAsyncThunk('auth/updateProfile', async (payload) => {
-  const formData = buildRegisterFormData(payload);
+  const formData = new FormData();
+  
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    
+    // Handle image fields specifically for React Native FormData
+    if ((key === 'profile_image' || key === 'avatar') && typeof value === 'object' && value.uri) {
+      formData.append(key, {
+        uri: value.uri,
+        name: value.fileName || value.name || `${key}.jpg`,
+        type: value.mimeType || value.type || 'image/jpeg',
+      });
+    } else {
+      formData.append(key, value);
+    }
+  });
+
   return apiRequest({
     endpoint: '/trainee/update-profile',
     method: 'POST',
@@ -299,7 +315,7 @@ const authSlice = createSlice({
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.actionLoading.updateProfile = false;
         state.successMessage = action.payload?.message || 'Profile updated successfully.';
-        const userData = action.payload?.data || action.payload?.user || action.payload;
+        const userData = action.payload?.data || action.payload?.user || (action.payload && !action.payload.message ? action.payload : null);
         if (userData && typeof userData === 'object') {
           state.user = userData;
         }

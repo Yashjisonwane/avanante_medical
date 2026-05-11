@@ -410,7 +410,8 @@ export default function HomeScreen() {
                   onPress={() => {
                     // Align with analytics report logic: use passed_attempt_id or id
                     // Restore full list of fallbacks to ensure we get a valid ID
-                    const assessmentId = lastCert.passed_attempt_id || lastCert.id || lastCert.assessment_id || lastCert.certificate_id;
+                    // Prioritize assessment_attempt_id or passed_attempt_id for the API
+                    const assessmentId = lastCert.assessment_attempt_id || lastCert.passed_attempt_id || lastCert.id || lastCert.assessment_id || lastCert.certificate_id;
                     if (assessmentId) {
                       router.push({
                         pathname: '/(tabs)/analytics/certificate',

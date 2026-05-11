@@ -21,6 +21,7 @@ import * as Linking from 'expo-linking';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Share, Alert } from 'react-native';
+import { jsPDF } from 'jspdf';
 
 export default function CertificateScreen() {
   const insets = useSafeAreaInsets();
@@ -60,9 +61,17 @@ export default function CertificateScreen() {
         // Try multiple endpoint variations to find the certificate
         const endpoints = [
           `/trainee/reports/certificate/${assessmentId}`,
+          `/trainee/reports/certificate-view/${assessmentId}`,
           `/trainee/certificates/${assessmentId}`,
           `/trainee/reports/certifications/${assessmentId}`,
           `/trainee/assessment/${assessmentId}/certificate`,
+          `/trainee/reports/certificate-details/${assessmentId}`,
+          `/trainee/certificates/view/${assessmentId}`,
+          `/trainee/reports/assessment/${assessmentId}/certificate`,
+          // Add variations for potentially string IDs or specific query patterns
+          `/trainee/reports/certificate?certificate_id=${assessmentId}`,
+          `/trainee/reports/certificate?attempt_id=${assessmentId}`,
+          `/trainee/reports/certificate?id=${assessmentId}`,
         ];
 
         for (const endpoint of endpoints) {
@@ -71,7 +80,7 @@ export default function CertificateScreen() {
               endpoint: endpoint,
               method: 'GET',
             });
-            if (response) {
+            if (response && (response.data || response.certificate_id || response.id)) {
               setSuccessEndpoint(endpoint);
               break; // Success, exit loop
             }
@@ -99,10 +108,10 @@ export default function CertificateScreen() {
       }
     };
 
-    if (assessmentId) {
+    if (assessmentId && assessmentId !== 'undefined' && assessmentId !== 'null') {
       fetchCertificate();
     } else {
-      setError('Certificate ID is missing');
+      setError('Certificate ID is missing or invalid');
       setLoading(false);
     }
   }, [assessmentId]);
@@ -144,15 +153,60 @@ export default function CertificateScreen() {
     status: String(data?.meta?.result?.status || data?.certificate_status || data?.status || 'PASS').toUpperCase(),
     timeTaken: data?.meta?.time?.time_taken_seconds ? `${Math.round(data.meta.time.time_taken_seconds)}s` : (data?.duration || data?.time_taken || 'N/A'),
     attempt: `#${data?.meta?.attempt?.attempt_id || data?.attempt || 1}`,
-    date: (data?.issued_at || data?.certificate_issue_date || data?.issue_date) ? new Date(data?.issued_at || data?.certificate_issue_date || data?.issue_date).toLocaleDateString() : new Date().toLocaleDateString(),
-    completedAt: data?.meta?.time?.submitted_at || data?.completed_at || '',
+    date: (data?.issued_at || data?.certificate_issue_date || data?.issue_date || data?.created_at || data?.updated_at || data?.completed_at) 
+      ? new Date(data?.issued_at || data?.certificate_issue_date || data?.issue_date || data?.created_at || data?.updated_at || data?.completed_at).toLocaleDateString() 
+      : new Date().toLocaleDateString(),
+    completedAt: data?.meta?.time?.submitted_at || data?.completed_at || data?.updated_at || '',
     certId: data?.certificate_id || data?.cert_id || data?.id || 'N/A',
     questionsAttempted: `${data?.meta?.questions?.attempted || 5}/${data?.meta?.questions?.total || 5}`,
     submitMethod: data?.meta?.attempt?.submit_type || data?.submit_method || 'Manual',
     
     // Links
     shareLinks: data?.share_links || {},
-    publicUrl: data?.share_links?.whatsapp?.split('text=')[1]?.split(' ')[1] || `https://lms-backend.netswaptech.com/certificate/${data?.certificate_id || data?.cert_id}`,
+    publicUrl: (() => {
+      // 1. Try to find a direct URL in the response
+      if (data?.certificate_url) return data.certificate_url;
+      if (data?.public_url) return data.public_url;
+      if (data?.view_url) return data.view_url;
+
+      // 2. Try to extract URL from share links, but avoid the share link itself
+      const extractNestedUrl = (link) => {
+        if (!link) return null;
+        try {
+          // Look for URLs that don't belong to social platforms
+          const urls = link.match(/https?:\/\/[^\s"'<>]+/g) || [];
+          const certUrl = urls.find(u => 
+            !u.includes('wa.me') && 
+            !u.includes('whatsapp.com') && 
+            !u.includes('linkedin.com') && 
+            !u.includes('facebook.com') &&
+            !u.includes('twitter.com')
+          );
+          
+          if (certUrl) return certUrl.replace(/[^\w\d\-\/\.\?\=\&\%:\+_]/g, '');
+
+          // Try decoding in case it's in a query param
+          const decoded = decodeURIComponent(link);
+          const nestedUrls = decoded.match(/https?:\/\/[^\s"'<>]+/g) || [];
+          const nestedCertUrl = nestedUrls.find(u => 
+            u.includes('lms-backend.netswaptech.com') || 
+            (!u.includes('wa.me') && !u.includes('whatsapp.com'))
+          );
+          if (nestedCertUrl) return nestedCertUrl.replace(/[^\w\d\-\/\.\?\=\&\%:\+_]/g, '');
+        } catch (e) {}
+        return null;
+      };
+
+      const fromWa = extractNestedUrl(data?.share_links?.whatsapp);
+      if (fromWa) return fromWa;
+
+      const fromLi = extractNestedUrl(data?.share_links?.linkedin);
+      if (fromLi) return fromLi;
+
+      // 3. Fallback to standard pattern
+      const id = data?.certificate_id || data?.cert_id || data?.id || assessmentId;
+      return `https://lms-backend.netswaptech.com/certificate/${id}`;
+    })(),
 
     // Design details
     design: data?.design || {}
@@ -161,53 +215,112 @@ export default function CertificateScreen() {
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      Alert.alert('Downloading', 'Downloading your certificate...');
+      Alert.alert('Downloading', 'Attempting to fetch your certificate PDF...');
       
-      // Construct download URL based on the endpoint that worked for fetching
-      let downloadUrl = '';
       const baseUrl = 'https://lms-backend.netswaptech.com/api/v1';
+      const webBaseUrl = 'https://lms-backend.netswaptech.com';
       
+      const downloadUrls = [];
       if (successEndpoint) {
-        // Try to append /pdf to the endpoint that worked
-        downloadUrl = `${baseUrl}${successEndpoint}/pdf`;
-      } else {
-        // Fallback to a default pattern
-        downloadUrl = `${baseUrl}/trainee/reports/certificate/${assessmentId}/pdf`;
+        downloadUrls.push(`${baseUrl}${successEndpoint}/pdf`);
+        downloadUrls.push(`${baseUrl}${successEndpoint}?export=pdf`);
       }
+      
+      downloadUrls.push(`${baseUrl}/trainee/reports/certificate/${assessmentId}/pdf`);
+      downloadUrls.push(`${baseUrl}/trainee/reports/certificate/${certificateData.certId}/pdf`);
+      downloadUrls.push(`${baseUrl}/trainee/reports/certificate-download/${assessmentId}`);
+      downloadUrls.push(`${webBaseUrl}/certificate/pdf/${certificateData.certId}`);
 
-      console.log('Attempting download from:', downloadUrl);
-      const filename = `${certificateData.certId || 'certificate'}.pdf`;
+      const filename = `Certificate_${certificateData.certId || assessmentId}.pdf`;
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
-
-      // Get auth headers
       const headers = await buildAuthHeaders();
 
-      // Download the file
-      let downloadResult = await FileSystem.downloadAsync(
-        downloadUrl,
-        fileUri,
-        { headers }
-      );
+      let success = false;
+      let downloadResult = null;
 
-      // If 404, try one more common pattern
-      if (downloadResult.status === 404) {
-        const altUrl = `${baseUrl}/trainee/certificates/${assessmentId}/pdf`;
-        console.log('404 encountered, trying alternative:', altUrl);
-        downloadResult = await FileSystem.downloadAsync(altUrl, fileUri, { headers });
+      // 1. Try server-side download first
+      for (const url of downloadUrls) {
+        try {
+          console.log('Attempting download from:', url);
+          downloadResult = await FileSystem.downloadAsync(url, fileUri, { headers });
+          
+          if (downloadResult.status === 200) {
+            const fileInfo = await FileSystem.getInfoAsync(fileUri);
+            if (fileInfo.exists && fileInfo.size > 2000) {
+              success = true;
+              break;
+            }
+          }
+        } catch (err) {
+          continue;
+        }
       }
 
-      // If still 404, try another one
-      if (downloadResult.status === 404) {
-        const altUrl2 = `${baseUrl}/trainee/reports/certificate/${certificateData.certId}/pdf`;
-        console.log('Still 404, trying string ID pattern:', altUrl2);
-        downloadResult = await FileSystem.downloadAsync(altUrl2, fileUri, { headers });
+      // 2. If server download fails, GENERATE PDF LOCALLY using jsPDF
+      if (!success) {
+        console.log('Server download failed. Generating PDF locally...');
+        try {
+          const doc = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          // Draw a professional border
+          doc.setLineWidth(1);
+          doc.rect(5, 5, 287, 200); 
+          doc.setLineWidth(0.5);
+          doc.rect(7, 7, 283, 196);
+
+          // Add content
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(30);
+          doc.setTextColor(30, 58, 138); // Dark blue
+          doc.text('CERTIFICATE OF COMPLETION', 148.5, 40, { align: 'center' });
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(16);
+          doc.setTextColor(100, 116, 139); // Gray
+          doc.text('This is to certify that', 148.5, 60, { align: 'center' });
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(24);
+          doc.setTextColor(0, 0, 0);
+          doc.text(certificateData.userName.toUpperCase(), 148.5, 80, { align: 'center' });
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(16);
+          doc.setTextColor(100, 116, 139);
+          doc.text('has successfully completed the course', 148.5, 100, { align: 'center' });
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(20);
+          doc.setTextColor(30, 58, 138);
+          doc.text(certificateData.courseName, 148.5, 120, { align: 'center' });
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(14);
+          doc.setTextColor(100, 116, 139);
+          doc.text(`Completed on ${certificateData.date} with a score of ${certificateData.percent}`, 148.5, 140, { align: 'center' });
+
+          doc.setFontSize(10);
+          doc.text(`Certificate ID: ${certificateData.certId}`, 148.5, 180, { align: 'center' });
+          doc.text('Avante Medical Learning Management System', 148.5, 190, { align: 'center' });
+
+          // Output as base64
+          const pdfBase64 = doc.output('datauristring').split(',')[1];
+          await FileSystem.writeAsStringAsync(fileUri, pdfBase64, { encoding: 'base64' });
+          
+          success = true;
+          downloadResult = { uri: fileUri };
+          console.log('Local PDF generated successfully');
+        } catch (pdfError) {
+          console.error('Local PDF generation failed:', pdfError);
+        }
       }
 
-      if (downloadResult.status === 200) {
-        // File downloaded successfully
-        Alert.alert('Download Complete', `Certificate saved as ${filename}`);
-        
-        // Share the file if sharing is available
+      if (success && downloadResult) {
+        Alert.alert('Success', 'Certificate ready!');
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(downloadResult.uri, {
             mimeType: 'application/pdf',
@@ -216,12 +329,32 @@ export default function CertificateScreen() {
           });
         }
       } else {
-        Alert.alert('Download Failed', 'Failed to download certificate. Status: ' + downloadResult.status);
+        // FINAL FALLBACK: Browser
+        Alert.alert(
+          'Download Issue',
+          'The server is currently unable to provide a PDF file. Opening the certificate in your browser instead.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Browser', onPress: () => {
+              // Try a few variations for the browser URL
+              const patterns = [
+                certificateData.publicUrl,
+                `https://lms-backend.netswaptech.com/certificate/view/${certificateData.certId}`,
+                `https://lms-backend.netswaptech.com/certificate/${certificateData.certId}`
+              ];
+              
+              // Just open the first one for now, or we could show a choice
+              Linking.openURL(patterns[0]).catch(err => {
+                Alert.alert('Error', 'Unable to open browser.');
+              });
+            }}
+          ]
+        );
       }
       
     } catch (error) {
       console.error('Download failed:', error);
-      Alert.alert('Download Failed', error.message || 'Unable to download certificate. Please try again or contact support.');
+      Alert.alert('Error', 'An unexpected error occurred during download.');
     } finally {
       setDownloading(false);
     }
