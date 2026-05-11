@@ -22,6 +22,7 @@ import i18n from '../../i18n';
 import { clearAuthMessages, loginUser, setLanguage } from '../../redux/slices/authSlice';
 import * as Device from 'expo-device';
 import { registerForPushNotificationsAsync } from '../../utils/notificationHelper';
+import { getOrGenerateDeviceId } from '../../redux/api/baseApi';
 
 const LANGUAGES = [
   { code: 'en', label: 'English', nativeLabel: 'English' },
@@ -67,10 +68,15 @@ export default function LoginScreen() {
         console.warn('FCM Token error:', tokenErr.message);
       }
 
+      const deviceId = await getOrGenerateDeviceId();
+      const deviceName = `${Device.brand} ${Device.modelName} (${Platform.OS})`;
+
       const loginPayload = {
         email: trimmedEmail,
         password,
         fcm_token: fcmToken,
+        device_id: deviceId,
+        device_name: deviceName,
         device_type: Platform.OS, // 'android' or 'ios'
       };
 

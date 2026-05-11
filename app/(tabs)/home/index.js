@@ -373,7 +373,7 @@ export default function HomeScreen() {
          <View style={styles.updatesBox}>
            {nextAction.topic && (
              <View style={styles.updateItem}>
-                <View style={[styles.upIcon, {backgroundColor: '#EFF6FF'}]}><Ionicons name="target" size={20} color={AppColors.primary} /></View>
+                <View style={[styles.upIcon, {backgroundColor: '#EFF6FF'}]}><Ionicons name="locate-outline" size={20} color={AppColors.primary} /></View>
                 <View style={{flex: 1}}>
                    <Text style={styles.upTitle}>{t('home.next', 'Next')}: {nextAction.topic.title}</Text>
                    <Text style={styles.upSub}>{nextAction.type === 'quiz' ? t('home.quiz', 'Quiz') : t('levels.topic', 'Topic')} • {t('home.ready_to_start', 'Ready to start')}</Text>

@@ -24,6 +24,8 @@ import i18n from '../../i18n';
 import { clearAuthMessages, registerUser, fetchRoles, fetchDesignations, setLanguage } from '../../redux/slices/authSlice';
 import { wp, hp, ms, fs } from '../../utils/responsive';
 import { Image } from 'react-native';
+import * as Device from 'expo-device';
+import { getOrGenerateDeviceId } from '../../redux/api/baseApi';
 
 const COUNTRIES = [
   { id: 'USA', name: 'United States' },
@@ -139,8 +141,14 @@ export default function OnboardingScreen() {
       return;
     }
 
+    const deviceId = await getOrGenerateDeviceId();
+    const deviceName = `${Device.brand} ${Device.modelName} (${Platform.OS})`;
+
     const payload = {
       ...form,
+      device_id: deviceId,
+      device_name: deviceName,
+      device_type: Platform.OS,
       ...(form.profile_image_uri.trim()
         ? {
           profile_image: {
@@ -402,7 +410,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#24458B',
-    paddingBottom: 25,
+    paddingBottom: hp(25),
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -412,41 +420,41 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(20),
     backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: wp(10),
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: fs(18),
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 0.5,
   },
   scrollContent: {
-    paddingHorizontal: 25,
-    paddingTop: 30,
-    paddingBottom: 40,
+    paddingHorizontal: wp(25),
+    paddingTop: hp(25),
+    paddingBottom: hp(40),
   },
   introSection: {
-    marginBottom: 25,
+    marginBottom: hp(25),
   },
   title: {
-    fontSize: 28,
+    fontSize: fs(26),
     fontWeight: '800',
     color: '#1A1A1A',
-    marginBottom: 12,
+    marginBottom: hp(10),
   },
   description: {
-    fontSize: 15,
+    fontSize: fs(14),
     color: '#666',
-    lineHeight: 22,
+    lineHeight: fs(20),
     fontWeight: '400',
   },
   form: {
@@ -487,48 +495,48 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   languageRow: {
-    paddingHorizontal: 20,
-    paddingTop: 15,
-    paddingBottom: 20,
+    paddingHorizontal: wp(20),
+    paddingTop: hp(10),
+    paddingBottom: hp(15),
     backgroundColor: '#24458B',
   },
   languageSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingVertical: hp(8),
+    paddingHorizontal: wp(12),
+    borderRadius: ms(12),
     alignSelf: 'flex-start',
   },
   languageText: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: '#F8FAFC',
-    marginRight: 6,
+    marginRight: wp(6),
   },
   languageValue: {
-    fontSize: 14,
+    fontSize: fs(13),
     color: '#fff',
     fontWeight: '700',
   },
   dropdownIcon: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: '#fff',
-    marginLeft: 8,
+    marginLeft: wp(8),
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: fs(18),
     fontWeight: '700',
     color: '#333',
-    marginBottom: 15,
+    marginBottom: hp(15),
     textAlign: 'center',
   },
   modalItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
+    paddingVertical: hp(15),
+    paddingHorizontal: wp(10),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -536,7 +544,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   modalItemText: {
-    fontSize: 16,
+    fontSize: fs(16),
     color: '#444',
   },
   modalItemTextActive: {
@@ -544,7 +552,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalCheckIcon: {
-    fontSize: 18,
+    fontSize: fs(18),
     color: '#24458B',
     fontWeight: '700',
   },
@@ -553,13 +561,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: wp(20),
   },
   modalContent: {
     width: '100%',
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: ms(20),
+    padding: wp(20),
     maxHeight: '50%',
   },
   avatar: {

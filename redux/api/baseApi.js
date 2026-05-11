@@ -9,7 +9,9 @@ const DEVICE_ID_KEY = 'auth_device_id';
 let inMemoryToken = null;
 
 const generateRandomId = () => {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  // Generate a UUID-like string (8-4-4-4-12)
+  const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+  return `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`;
 };
 
 const extractErrorMessage = (payload, status) => {
