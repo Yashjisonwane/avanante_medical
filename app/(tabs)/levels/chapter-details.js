@@ -189,17 +189,17 @@ export default function ChapterDetailsScreen() {
   }, [currentChapter]);
 
   // Frontend calculation for live progress
-  const completedTopicsCount = topics.filter(t => 
-    t.is_completed == true || t.is_completed == 1 || t.is_completed == 'true'
+  const completedTopicsCount = topics.filter(topic => 
+    topic.is_completed == true || topic.is_completed == 1 || topic.is_completed == 'true'
   ).length;
 
   const totalTopicsCount = topics.length;
   const progressPercent = totalTopicsCount > 0 ? Math.round((completedTopicsCount / totalTopicsCount) * 100) : 0;
 
   // Find first unlocked topic that is not completed
-  const currentTopicIndex = topics.findIndex(t => {
-    const isUnlocked = t.is_unlocked == true || t.is_unlocked == 1 || t.is_unlocked == 'true' || t.is_unlocked == '1' || t.isUnlocked == true || t.isUnlocked == 1;
-    const isCompleted = t.is_completed == true || t.is_completed == 1 || t.is_completed == 'true';
+  const currentTopicIndex = topics.findIndex(topic => {
+    const isUnlocked = topic.is_unlocked == true || topic.is_unlocked == 1 || topic.is_unlocked == 'true' || topic.is_unlocked == '1' || topic.isUnlocked == true || topic.isUnlocked == 1;
+    const isCompleted = topic.is_completed == true || topic.is_completed == 1 || topic.is_completed == 'true';
     return isUnlocked && !isCompleted;
   });
 
