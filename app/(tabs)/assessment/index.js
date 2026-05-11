@@ -21,7 +21,7 @@ export default function AssessmentScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   
-  const [activeTab, setActiveTab] = useState('quiz'); // 'quiz' | 'exam'
+  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' | 'certificate'
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -30,7 +30,7 @@ export default function AssessmentScreen() {
     setLoading(true);
     setError(null);
     try {
-      // type can be 'topic' for Quiz or 'level' for Exam
+      // type can be 'topic' for Analytics (Quiz) or 'level' for Certificate (Exam)
       const response = await apiRequest({
         endpoint: `/trainee/reports/assessment-report?page=1&per_page=100&type=${type}&lang=${i18n.language}`,
         method: 'GET',
@@ -50,7 +50,7 @@ export default function AssessmentScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchReports(activeTab === 'quiz' ? 'topic' : 'level');
+      fetchReports(activeTab === 'analytics' ? 'topic' : 'level');
     }, [activeTab, i18n.language])
   );
 
@@ -163,7 +163,7 @@ export default function AssessmentScreen() {
                 }
               })}
             >
-              <Text style={styles.certificateBtnText}>{t('assessment.view_certificate', { defaultValue: 'View Certificate' })}</Text>
+              <Text style={styles.certificateBtnText}>{t('analytics.view_certificate', { defaultValue: 'View Certificate' })}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -184,20 +184,20 @@ export default function AssessmentScreen() {
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'quiz' && styles.activeTabButton]}
-          onPress={() => setActiveTab('quiz')}
+          style={[styles.tabButton, activeTab === 'analytics' && styles.activeTabButton]}
+          onPress={() => setActiveTab('analytics')}
         >
-          <Text style={[styles.tabText, activeTab === 'quiz' && styles.activeTabText]}>
-            {t('assessment.quiz', { defaultValue: 'Quiz' })}
+          <Text style={[styles.tabText, activeTab === 'analytics' && styles.activeTabText]}>
+            {t('home.analytics', { defaultValue: 'Analytics' })}
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'exam' && styles.activeTabButton]}
-          onPress={() => setActiveTab('exam')}
+          style={[styles.tabButton, activeTab === 'certificate' && styles.activeTabButton]}
+          onPress={() => setActiveTab('certificate')}
         >
-          <Text style={[styles.tabText, activeTab === 'exam' && styles.activeTabText]}>
-            {t('assessment.exam', { defaultValue: 'Exam' })}
+          <Text style={[styles.tabText, activeTab === 'certificate' && styles.activeTabText]}>
+            {t('analytics.certificates', { defaultValue: 'Certificate' })}
           </Text>
         </TouchableOpacity>
       </View>

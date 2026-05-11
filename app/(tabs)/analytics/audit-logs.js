@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
@@ -19,6 +19,17 @@ export default function AuditLogsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const { returnTo } = useLocalSearchParams();
+  
+  const handleGoBack = () => {
+    if (returnTo) {
+      router.replace(returnTo);
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/analytics');
+    }
+  };
   
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -105,7 +116,7 @@ export default function AuditLogsScreen() {
       <View style={[styles.header, { paddingTop: insets.top + hp(5) }]}>
         <View style={styles.greenAccentBar} />
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={ms(24)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.titleGroup}>

@@ -302,7 +302,10 @@ export default function AnalyticsScreen() {
             </View>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
-              onPress={() => router.push('/(tabs)/analytics/audit-logs')}
+              onPress={() => router.push({
+                pathname: '/(tabs)/analytics/audit-logs',
+                params: { returnTo: '/(tabs)/analytics' }
+              })}
             >
               <Text style={styles.actionBtnText}>{t('analytics.view_audit_logs', { defaultValue: 'Click to View Audit Logs' })}</Text>
             </TouchableOpacity>
@@ -323,7 +326,10 @@ export default function AnalyticsScreen() {
             </View>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
-              onPress={() => router.push('/(tabs)/analytics/user-progress')}
+              onPress={() => router.push({
+                pathname: '/(tabs)/analytics/user-progress',
+                params: { returnTo: '/(tabs)/analytics' }
+              })}
             >
               <Text style={styles.actionBtnText}>{t('analytics.view_user_progress', { defaultValue: 'Click to View Progress' })}</Text>
             </TouchableOpacity>
@@ -344,7 +350,10 @@ export default function AnalyticsScreen() {
             </View>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: AppColors.primary }]}
-              onPress={() => router.push('/(tabs)/analytics/certification-report')}
+              onPress={() => router.push({
+                pathname: '/(tabs)/analytics/certification-report',
+                params: { returnTo: '/(tabs)/analytics' }
+              })}
             >
               <Text style={styles.actionBtnText}>{t('analytics.view_certifications', { defaultValue: 'Click to View Certificates' })}</Text>
             </TouchableOpacity>
