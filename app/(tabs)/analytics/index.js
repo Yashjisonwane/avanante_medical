@@ -40,7 +40,7 @@ const ModuleAccordion = ({ module, chapters }) => {
               <View style={styles.moduleBarTrack}>
                 <View style={[styles.moduleBarFill, { width: `${module.progress_percent}%` }]} />
               </View>
-              <Text style={styles.modulePercent}>{Number(module.progress_percent).toFixed(1)}%</Text>
+              <Text style={styles.modulePercent}>{(parseFloat(module.progress_percent) || 0).toFixed(1)}%</Text>
               <Text style={styles.moduleFraction}>{t('analytics.module_fraction', { completed: module.completed_topics, total: module.total_topics })}</Text>
             </View>
           </View>
@@ -65,7 +65,7 @@ const ModuleAccordion = ({ module, chapters }) => {
                 <Ionicons name="document-text" size={ms(10)} color={AppColors.textSecondary} />
               </View>
               <Text style={styles.chapterTitle}>{chapter.chapter_title}</Text>
-              <Text style={styles.chapterPercent}>{Number(chapter.progress_percent).toFixed(1)}%</Text>
+              <Text style={styles.chapterPercent}>{(parseFloat(chapter.progress_percent) || 0).toFixed(1)}%</Text>
             </View>
           ))}
         </View>
@@ -180,7 +180,9 @@ export default function AnalyticsScreen() {
               {stats.completed_topics || 0}/{stats.total_topics || 0}
             </Text>
             <Text style={styles.gridSubtext}>
-              {Number(stats.progress_percent).toFixed(1)}% {t('analytics.complete')}
+              {stats.total_topics > 0 
+                ? (((parseFloat(stats.completed_topics) || 0) / stats.total_topics) * 100).toFixed(1)
+                : (parseFloat(stats.progress_percent) || 0).toFixed(1)}% {t('analytics.complete')}
             </Text>
           </View>
         </View>
@@ -213,16 +215,15 @@ export default function AnalyticsScreen() {
                   </View>
                 </View>
 
-                <View style={styles.focusProgressBox}>
+                 <View style={styles.focusProgressBox}>
                   <View style={styles.progressHeader}>
                     <Text style={styles.progressLabel}>{t('levels.level_progress', { defaultValue: 'Topic Progress' })}</Text>
-                    <Text style={styles.progressValue}>{Number(dashboard?.current_learning?.progress_percent).toFixed(1)}%</Text>
+                    <Text style={styles.progressValue}>{(parseFloat(dashboard?.current_learning?.progress_percent) || 0).toFixed(1)}%</Text>
                   </View>
                   <View style={styles.progressBarTrack}>
-                    <View style={[styles.progressBarFill, { width: `${dashboard?.current_learning?.progress_percent || 0}%`, backgroundColor: AppColors.primary }]} />
+                    <View style={[styles.progressBarFill, { width: `${parseFloat(dashboard?.current_learning?.progress_percent) || 0}%`, backgroundColor: AppColors.primary }]} />
                   </View>
                 </View>
-
                 <TouchableOpacity 
                   style={styles.continueBtn}
                   onPress={() => {

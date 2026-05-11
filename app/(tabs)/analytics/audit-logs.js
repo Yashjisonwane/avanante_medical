@@ -74,7 +74,8 @@ export default function AuditLogsScreen() {
     const description = item?.description || item?.message || 'No description available';
     const ip = item?.ip_address || item?.ip || 'N/A';
     const device = item?.user_agent || item?.device || 'N/A';
-    const date = item?.created_at ? new Date(item.created_at).toLocaleString() : 'N/A';
+    const rawDate = item?.created_at || item?.updated_at || item?.date;
+    const date = rawDate ? new Date(rawDate).toLocaleString() : 'N/A';
     const userEmail = item?.user?.email || item?.trainee?.email || item?.trainee_email || item?.user_email || 'N/A';
     
     // Status color for event types

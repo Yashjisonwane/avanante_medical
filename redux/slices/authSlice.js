@@ -316,7 +316,7 @@ const authSlice = createSlice({
         state.actionLoading.updateProfile = false;
         state.successMessage = action.payload?.message || 'Profile updated successfully.';
         const userData = action.payload?.data || action.payload?.user || (action.payload && !action.payload.message ? action.payload : null);
-        if (userData) {
+        if (userData && typeof userData === 'object') {
           state.user = userData;
         }
       })

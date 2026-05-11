@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   BackHandler,
+  AppState,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ import {
   resumeAssessment,
   updateQuestionAnswer
 } from '../../../redux/slices/courseSlice';
+import * as ScreenCapture from 'expo-screen-capture';
 
 const OptionItem = ({ index, text, selected, onPress }) => {
   const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -40,7 +42,7 @@ const OptionItem = ({ index, text, selected, onPress }) => {
           <Ionicons name="checkmark" size={ms(16)} color="#3B82F6" />
         ) : null}
       </View>
-      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+      <Text style={[styles.optionText, selected && styles.optionTextSelected]} selectable={false}>
         {letters[index]}. {text}
       </Text>
     </TouchableOpacity>
@@ -56,6 +58,21 @@ export default function ExamScreen() {
 
   const { assessment, loading } = useSelector((state) => state.course);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  
+  // Security: Prevent Screenshots and Screen Recording
+  ScreenCapture.usePreventScreenCapture();
+
+  useEffect(() => {
+    const subscription = ScreenCapture.addScreenshotListener(() => {
+      Alert.alert(
+        t('exam.security_warning', 'Security Warning'),
+        t('exam.screenshot_msg', 'Screenshots are forbidden during exams. Your attempt has been noted.'),
+        [{ text: "OK", style: "cancel" }]
+      );
+    });
+    return () => subscription.remove();
+  }, []);
+
   const [selectedOptionId, setSelectedOptionId] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageScale, setImageScale] = useState(1);
@@ -103,6 +120,22 @@ export default function ExamScreen() {
     };
     initExam();
   }, [dispatch, assessment_id]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if ((nextAppState === 'background' || nextAppState === 'inactive') && !isSubmitted) {
+        Alert.alert(
+          t('exam.security_warning', 'Security Warning'),
+          t('exam.security_msg', 'Leaving the exam screen is not allowed. Your activity has been logged. Please stay on this screen to complete your assessment.'),
+          [{ text: t('common.resume', 'Resume'), style: 'cancel' }]
+        );
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isSubmitted]);
 
   useEffect(() => {
     // Handle hardware back button
@@ -412,6 +445,10 @@ export default function ExamScreen() {
               <Ionicons name="book-outline" size={ms(18)} color="#3B82F6" />
             </View>
             <Text style={styles.detailsTitle}>{t('levels.topic_details', 'Topic Details')}</Text>
+            <View style={styles.securityBadge}>
+              <Ionicons name="shield-checkmark" size={ms(10)} color="#10B981" />
+              <Text style={styles.securityBadgeText}>SECURE</Text>
+            </View>
           </View>
           <View style={styles.attemptsInfo}>
             {timeLeft && (
@@ -483,7 +520,7 @@ export default function ExamScreen() {
 
           {/* Question Section */}
           <View style={styles.questionContent}>
-            <Text style={styles.questionText}>
+            <Text style={styles.questionText} selectable={false}>
               {currentQuestion.question_text || currentQuestion.text || `Question ${currentQuestionIndex + 1}`}
             </Text>
 
@@ -705,6 +742,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
+  },
+  securityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(2),
+    borderRadius: ms(4),
+    borderWidth: 0.5,
+    borderColor: '#DCFCE7',
+    marginLeft: wp(8),
+  },
+  securityBadgeText: {
+    fontSize: fs(9),
+    color: '#10B981',
+    fontWeight: '800',
+    marginLeft: wp(4),
   },
   progressContainer: {
     marginBottom: hp(20),
