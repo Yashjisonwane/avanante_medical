@@ -50,26 +50,14 @@ export async function registerForPushNotificationsAsync() {
     }
 
     try {
-      // In SDK 51+, getExpoPushTokenAsync is the standard for both Expo Go and Development Builds
-      // if you want to use Expo's push service. 
-      // If you specifically need the raw FCM token for your own backend, use getDevicePushTokenAsync.
-      
-      const expoToken = await Notifications.getExpoPushTokenAsync({
-        projectId: projectId,
-      });
-      token = expoToken.data;
-      console.log('Expo Push Token:', token);
+      // Use getDevicePushTokenAsync to get the raw FCM (Android) or APNs (iOS) token
+      // This is required for direct Firebase/FCM backend integrations.
+      const deviceToken = await Notifications.getDevicePushTokenAsync();
+      token = deviceToken.data;
+      console.log('Real FCM/Device Token:', token);
     } catch (e) {
-      console.warn('Error fetching Expo push token, trying device token:', e.message);
-      try {
-        // Fallback to device token (FCM/APNs)
-        const deviceToken = await Notifications.getDevicePushTokenAsync();
-        token = deviceToken.data;
-        console.log('Device Push Token:', token);
-      } catch (deviceErr) {
-        console.error('Error fetching device push token:', deviceErr.message);
-        token = 'TOKEN_FETCH_ERROR';
-      }
+      console.error('Error fetching device push token:', e.message);
+      token = 'TOKEN_FETCH_ERROR';
     }
   } else {
     console.log('Must use physical device for Push Notifications');
