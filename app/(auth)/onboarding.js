@@ -98,7 +98,7 @@ export default function OnboardingScreen() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant gallery permissions to upload a photo.');
+      Alert.alert(t('common.error', 'Error'), t('common.permission_gallery_required', 'Please grant gallery permissions to upload a photo.'));
       return;
     }
 
@@ -130,12 +130,12 @@ export default function OnboardingScreen() {
 
     const hasMissingField = requiredKeys.some((key) => !String(form[key]).trim());
     if (hasMissingField) {
-      Alert.alert('Missing fields', 'Please fill all required fields.');
+      Alert.alert(t('common.error', 'Error'), t('common.missing_fields', 'Please fill all required fields.'));
       return;
     }
 
     if (form.password !== form.password_confirmation) {
-      Alert.alert('Validation error', 'Password and confirm password must match.');
+      Alert.alert(t('common.error', 'Error'), t('common.password_mismatch', 'Password and confirm password must match.'));
       return;
     }
 
@@ -157,13 +157,13 @@ export default function OnboardingScreen() {
     const action = await dispatch(registerUser(payload));
     if (registerUser.fulfilled.match(action)) {
       dispatch(clearAuthMessages());
-      Alert.alert('Success', 'Account created successfully. Please verify your email with the token sent to you.', [
-        { text: 'Verify Now', onPress: () => router.replace('/(auth)/verify-email') }
+      Alert.alert(t('common.success', 'Success'), t('auth.account_created', 'Account created successfully. Please verify your email with the token sent to you.'), [
+        { text: t('auth.verify_now', 'Verify Now'), onPress: () => router.replace('/(auth)/verify-email') }
       ]);
       return;
     }
 
-    Alert.alert('Registration failed', action.error?.message || 'Unable to create account.');
+    Alert.alert(t('common.error', 'Error'), action.error?.message || t('auth.registration_failed', 'Unable to create account.'));
   };
 
   return (
@@ -194,9 +194,9 @@ export default function OnboardingScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.introSection}>
-            <Text style={styles.title}>New Employee Account</Text>
+            <Text style={styles.title}>{t('auth.onboarding_title', 'New Employee Account')}</Text>
             <Text style={styles.description}>
-              Please fill in the details below to register a new employee on the Avante Medical LMS. This will create their unique profile and access credentials.
+              {t('auth.onboarding_desc', 'Please fill in the details below to register a new employee on the Avante Medical LMS. This will create their unique profile and access credentials.')}
             </Text>
           </View>
 
@@ -297,7 +297,7 @@ export default function OnboardingScreen() {
 
             {/* Profile Image Section */}
             <View style={styles.profileSection}>
-              <Text style={styles.fieldLabel}>Profile Image</Text>
+              <Text style={styles.fieldLabel}>{t('auth.profile_image', 'Profile Image')}</Text>
               <View style={styles.profileUploadRow}>
                 <View style={styles.avatarWrapper}>
                   {form.profile_image_uri ? (
@@ -308,10 +308,10 @@ export default function OnboardingScreen() {
                 </View>
                 <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
                   <Ionicons name="camera-outline" size={ms(18)} color="#475569" />
-                  <Text style={styles.uploadBtnText}>Upload Photo</Text>
+                  <Text style={styles.uploadBtnText}>{t('auth.upload_photo', 'Upload Photo')}</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.uploadHint}>Supported: JPG, PNG, GIF • Max 5MB</Text>
+              <Text style={styles.uploadHint}>{t('auth.supported_formats', 'Supported: JPG, PNG, GIF • Max 5MB')}</Text>
             </View>
 
             <View style={styles.buttonContainer}>
@@ -321,7 +321,7 @@ export default function OnboardingScreen() {
                 disabled={actionLoading.register}
               >
                 <Text style={styles.registerBtnText}>
-                  {actionLoading.register ? 'Please wait...' : 'Register'}
+                  {actionLoading.register ? t('auth.please_wait', 'Please wait...') : t('auth.register', 'Register')}
                 </Text>
               </TouchableOpacity>
 
@@ -329,23 +329,23 @@ export default function OnboardingScreen() {
 
               <View style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>OR</Text>
+                <Text style={styles.dividerText}>{t('auth.or', 'OR')}</Text>
                 <View style={styles.dividerLine} />
               </View>
 
-              <Text style={styles.alreadyText}>Already have an account?</Text>
+              <Text style={styles.alreadyText}>{t('auth.already_have_account', 'Already have an account?')}</Text>
 
               <TouchableOpacity
                 style={styles.loginBtn}
                 onPress={() => router.replace('/(auth)/login')}
               >
-                <Text style={styles.loginBtnText}>Login to your account</Text>
+                <Text style={styles.loginBtnText}>{t('auth.login_to_account', 'Login to your account')}</Text>
               </TouchableOpacity>
 
               <Text style={styles.termsText}>
-                By creating an account, you agree to Avante Medical's{' '}
-                <Text style={styles.linkText}>Terms of Service</Text> and{' '}
-                <Text style={styles.linkText}>Privacy Policy</Text>.
+                {t('auth.terms_agreement', "By creating an account, you agree to Avante Medical's")}{' '}
+                <Text style={styles.linkText}>{t('auth.terms', 'Terms of Service')}</Text> {t('auth.and', 'and')}{' '}
+                <Text style={styles.linkText}>{t('auth.privacy', 'Privacy Policy')}</Text>.
               </Text>
             </View>
           </View>

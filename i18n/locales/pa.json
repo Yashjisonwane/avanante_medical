@@ -56,7 +56,8 @@
     "permission_denied": "ਇਜਾਜ਼ਤ ਤੋਂ ਇਨਕਾਰ ਕੀਤਾ ਗਿਆ",
     "permission_camera_required": "ਕਿਰਪਾ ਕਰਕੇ ਤਸਵੀਰ ਅਪਲੋਡ ਕਰਨ ਲਈ ਕੈਮਰਾ ਅਧਿਕਾਰ ਦਿਉ।",
     "permission_gallery_required": "ਕਿਰਪਾ ਕਰਕੇ ਤਸਵੀਰ ਅਪਲੋਡ ਕਰਨ ਲਈ ਗੈਲਰੀ ਅਧਿਕਾਰ ਦਿਉ।",
-    "change_language": "ਭਾਸ਼ਾ ਬਦਲੋ"
+    "change_language": "ਭਾਸ਼ਾ ਬਦਲੋ",
+    "password_mismatch": "ਪਾਸਵਰਡ ਅਤੇ ਪੁਸ਼ਟੀਕਰਨ ਪਾਸਵਰਡ ਮੇਲ ਖਾਣੇ ਚਾਹੀਦੇ ਹਨ।"
   },
   "auth": {
     "login_button": "ਸਾਈਨ ਇਨ ਕਰੋ",
@@ -70,7 +71,23 @@
     "terms": "ਸੇਵਾ ਦੀਆਂ ਸ਼ਰਤਾਂ",
     "privacy": "ਪ੍ਰਾਈਵੇਸੀ ਪਾਲਿਸੀ",
     "dont_have_account": "ਕੀ ਤੁਹਾਡਾ ਖਾਤਾ ਨਹੀਂ ਹੈ?",
-    "contact_admin": "ਐਡਮਿਨ ਨਾਲ ਸੰਪਰਕ ਕਰੋ"
+    "contact_admin": "ਐਡਮਿਨ ਨਾਲ ਸੰਪਰਕ ਕਰੋ",
+    "onboarding_title": "ਨਵਾਂ ਕਰਮਚਾਰੀ ਖਾਤਾ",
+    "onboarding_desc": "ਅਵਾਂਤੇ ਮੈਡੀਕਲ LMS 'ਤੇ ਨਵੇਂ ਕਰਮਚਾਰੀ ਨੂੰ ਰਜਿਸਟਰ ਕਰਨ ਲਈ ਕਿਰਪਾ ਕਰਕੇ ਹੇਠਾਂ ਦਿੱਤੇ ਵੇਰਵੇ ਭਰੋ। ਇਹ ਉਹਨਾਂ ਦਾ ਵਿਲੱਖਣ ਪ੍ਰੋਫਾਈਲ ਅਤੇ ਪਹੁੰਚ ਪ੍ਰਮਾਣ ਪੱਤਰ ਬਣਾਏਗਾ।",
+    "profile_image": "ਪ੍ਰੋਫਾਈਲ ਚਿੱਤਰ",
+    "upload_photo": "ਫੋਟੋ ਅਪਲੋਡ ਕਰੋ",
+    "supported_formats": "ਸਮਰਥਿਤ: JPG, PNG, GIF • ਅਧਿਕਤਮ 5MB",
+    "register": "ਰਜਿਸਟਰ ਕਰੋ",
+    "please_wait": "ਕਿਰਪਾ ਕਰਕੇ ਉਡੀਕ ਕਰੋ...",
+    "already_have_account": "ਕੀ ਤੁਹਾਡਾ ਪਹਿਲਾਂ ਹੀ ਖਾਤਾ ਹੈ?",
+    "login_to_account": "ਆਪਣੇ ਖਾਤੇ ਵਿੱਚ ਲੌਗਇਨ ਕਰੋ",
+    "terms_agreement": "ਖਾਤਾ ਬਣਾ ਕੇ, ਤੁਸੀਂ ਅਵਾਂਤੇ ਮੈਡੀਕਲ ਦੀਆਂ",
+    "and": "ਅਤੇ",
+    "account_created": "ਖਾਤਾ ਸਫਲਤਾਪੂਰਵਕ ਬਣਾਇਆ ਗਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਤੁਹਾਨੂੰ ਭੇਜੇ ਗਏ ਟੋਕਨ ਨਾਲ ਆਪਣੀ ਈਮੇਲ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ।",
+    "verify_now": "ਹੁਣੇ ਪੁਸ਼ਟੀ ਕਰੋ",
+    "registration_failed": "ਖਾਤਾ ਬਣਾਉਣ ਵਿੱਚ ਅਸਮਰੱਥ।",
+    "login_failed": "ਲੌਗਇਨ ਅਸਫਲ ਰਿਹਾ",
+    "missing_email_password": "ਕਿਰਪਾ ਕਰਕੇ ਈਮੇਲ ਅਤੇ ਪਾਸਵਰਡ ਦਰਜ ਕਰੋ।"
   },
   "home": {
     "title": "ਹੋਮ",

@@ -56,7 +56,8 @@
     "permission_denied": "अनुमति अस्वीकार कर दी गई",
     "permission_camera_required": "कृपया फोटो अपलोड करने के लिए कैमरा अनुमति दें।",
     "permission_gallery_required": "कृपया फोटो अपलोड करने के लिए गैलरी अनुमति दें।",
-    "change_language": "भाषा बदलें"
+    "change_language": "भाषा बदलें",
+    "password_mismatch": "पासवर्ड और पुष्टि पासवर्ड मेल खाना चाहिए।"
   },
   "auth": {
     "login_button": "साइन इन करें",
@@ -70,7 +71,23 @@
     "terms": "सेवा की शर्तें",
     "privacy": "गोपनीयता नीति",
     "dont_have_account": "क्या आपका खाता नहीं है?",
-    "contact_admin": "एडमिन से संपर्क करें"
+    "contact_admin": "एडमिन से संपर्क करें",
+    "onboarding_title": "नया कर्मचारी खाता",
+    "onboarding_desc": "अवांते मेडिकल एलएमएस पर एक नए कर्मचारी को पंजीकृत करने के लिए कृपया नीचे दिए गए विवरण भरें। यह उनकी विशिष्ट प्रोफ़ाइल और एक्सेस क्रेडेंशियल बनाएगा।",
+    "profile_image": "प्रोफ़ाइल छवि",
+    "upload_photo": "फोटो अपलोड करें",
+    "supported_formats": "समर्थित: JPG, PNG, GIF • अधिकतम 5MB",
+    "register": "पंजीकरण करें",
+    "please_wait": "कृपया प्रतीक्षा करें...",
+    "already_have_account": "क्या आपका पहले से ही एक खाता है?",
+    "login_to_account": "अपने खाते में लॉगिन करें",
+    "terms_agreement": "खाता बनाकर, आप अवांते मेडिकल की",
+    "and": "और",
+    "account_created": "खाता सफलतापूर्वक बनाया गया। कृपया आपको भेजे गए टोकन के साथ अपना ईमेल सत्यापित करें।",
+    "verify_now": "अभी सत्यापित करें",
+    "registration_failed": "खाता बनाने में असमर्थ।",
+    "login_failed": "लॉगिन विफल",
+    "missing_email_password": "कृपया ईमेल और पासवर्ड दर्ज करें।"
   },
   "home": {
     "title": "होम",

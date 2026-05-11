@@ -53,7 +53,8 @@
     "permission_denied": "Permission Denied",
     "permission_camera_required": "Please grant camera permissions to upload a photo.",
     "permission_gallery_required": "Please grant gallery permissions to upload a photo.",
-    "change_language": "Change Language"
+    "change_language": "Change Language",
+    "password_mismatch": "Password and confirm password must match."
   },
   "auth": {
     "login_button": "Sign In",
@@ -67,7 +68,23 @@
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
     "dont_have_account": "Don't have an account?",
-    "contact_admin": "Contact Admin"
+    "contact_admin": "Contact Admin",
+    "onboarding_title": "New Employee Account",
+    "onboarding_desc": "Please fill in the details below to register a new employee on the Avante Medical LMS. This will create their unique profile and access credentials.",
+    "profile_image": "Profile Image",
+    "upload_photo": "Upload Photo",
+    "supported_formats": "Supported: JPG, PNG, GIF • Max 5MB",
+    "register": "Register",
+    "please_wait": "Please wait...",
+    "already_have_account": "Already have an account?",
+    "login_to_account": "Login to your account",
+    "terms_agreement": "By creating an account, you agree to Avante Medical's",
+    "and": "and",
+    "account_created": "Account created successfully. Please verify your email with the token sent to you.",
+    "verify_now": "Verify Now",
+    "registration_failed": "Unable to create account.",
+    "login_failed": "Login failed",
+    "missing_email_password": "Please enter email and password."
   },
   "home": {
     "title": "Home",

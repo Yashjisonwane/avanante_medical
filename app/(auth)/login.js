@@ -50,7 +50,7 @@ export default function LoginScreen() {
     const trimmedEmail = identifier.trim();
 
     if (!trimmedEmail || !password) {
-      Alert.alert('Missing fields', 'Please enter email and password.');
+      Alert.alert(t('common.error', 'Error'), t('auth.missing_email_password', 'Please enter email and password.'));
       return;
     }
 
@@ -93,9 +93,9 @@ export default function LoginScreen() {
         return;
       }
 
-      Alert.alert('Login failed', action.error?.message || 'Unable to login.');
+      Alert.alert(t('auth.login_failed', 'Login failed'), action.error?.message || t('auth.registration_failed', 'Unable to login.'));
     } catch (error) {
-      Alert.alert('Login failed', error.message || 'Unable to login.');
+      Alert.alert(t('auth.login_failed', 'Login failed'), error.message || t('auth.registration_failed', 'Unable to login.'));
     }
   };
 
@@ -156,7 +156,7 @@ export default function LoginScreen() {
 
 
             <CustomButton
-              title={actionLoading.login ? 'Please wait...' : t('auth.login_button')}
+              title={actionLoading.login ? t('auth.please_wait', 'Please wait...') : t('auth.login_button')}
               onPress={handleLogin}
               disabled={actionLoading.login}
             />
