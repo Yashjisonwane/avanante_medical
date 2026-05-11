@@ -28,6 +28,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.avante.salestraining",
+      "permissions": ["POST_NOTIFICATIONS"],
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
@@ -37,27 +38,7 @@
             {
               "scheme": "https",
               "host": "lms-backend.netswaptech.com",
-              "pathPrefix": "/api/v1/trainee/verify-email"
-            },
-            {
-              "scheme": "https",
-              "host": "lms-backend.netswaptech.com",
-              "pathPrefix": "/verify-email"
-            },
-            {
-              "scheme": "https",
-              "host": "lms-backend.netswaptech.com",
-              "pathPrefix": "/reset-password"
-            },
-            {
-              "scheme": "https",
-              "host": "avanta-sales.vercel.app",
-              "pathPrefix": "/verify-email"
-            },
-            {
-              "scheme": "https",
-              "host": "avanta-sales.vercel.app",
-              "pathPrefix": "/reset-password"
+              "pathPrefix": "/"
             }
           ],
           "category": [

@@ -9,6 +9,7 @@ import './../i18n'; // Import i18n configuration
 import { store } from '../redux/store';
 import { hydrateAuth } from '../redux/slices/authSlice';
 import { registerForPushNotificationsAsync } from '../utils/notificationHelper';
+import { fetchUnreadCount } from '../redux/slices/notificationSlice';
 
 function AppNavigator() {
   const dispatch = useDispatch();
@@ -35,13 +36,20 @@ function AppNavigator() {
 
       // Listen for notifications while the app is foregrounded
       const notificationListener = Notifications.addNotificationReceivedListener(notification => {
-        console.log('Notification Received in Foreground:', notification);
+        console.log('--- NOTIFICATION RECEIVED ---');
+        console.log('Title:', notification.request.content.title);
+        console.log('Body:', notification.request.content.body);
+        console.log('Data:', notification.request.content.data);
+        
+        // Update the notification bell count automatically
+        dispatch(fetchUnreadCount());
       });
 
       // Listen for user interaction with a notification
       const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('User interacted with notification:', response);
-        // You can add navigation logic here if needed
+        console.log('--- NOTIFICATION INTERACTION ---');
+        console.log('Action:', response.actionIdentifier);
+        console.log('Notification Data:', response.notification.request.content.data);
       });
 
       return () => {
