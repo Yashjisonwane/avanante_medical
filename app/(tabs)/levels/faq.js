@@ -17,6 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { fetchFaqs } from '../../../redux/slices/courseSlice';
+import HtmlContent from '../../../components/HtmlContent';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -59,7 +60,10 @@ const FAQItem = ({ item, index }) => {
               resizeMode="contain" 
             />
           )}
-          <Text style={[styles.answerText, item.image && { marginLeft: 0 }]}>{item.answer}</Text>
+          <HtmlContent 
+            html={item.answer} 
+            baseStyle={{ marginLeft: item.image ? 0 : wp(36), fontSize: fs(14) }}
+          />
         </View>
       )}
     </View>

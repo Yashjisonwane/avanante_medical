@@ -28,7 +28,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.avante.salestraining",
-      "permissions": ["POST_NOTIFICATIONS"],
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ],
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
@@ -54,7 +56,8 @@
     "plugins": [
       "expo-router",
       "expo-localization",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-video"
     ],
     "updates": {
       "url": "https://u.expo.dev/INSERT_PROJECT_ID_HERE",
@@ -64,10 +67,11 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
+    "owner": "vishal964411",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d31944b0-bd45-4f08-925e-89779f066540"
+        "projectId": "e62cde19-92ef-4739-8f2b-d28cf13412dc"
       }
     }
   }

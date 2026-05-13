@@ -20,6 +20,7 @@ import { AppColors } from '../../../constants/Theme';
 import { fetchModuleProgress } from '../../../redux/slices/courseSlice';
 import { formatImageUrl } from '../../../utils/imageUtils';
 import { Image } from 'react-native';
+import HtmlContent from '../../../components/HtmlContent';
 
 const ChapterItem = ({ chapterData, isCurrent }) => {
   const router = useRouter();
@@ -317,7 +318,7 @@ export default function ModuleDetailsScreen() {
           </View>
           <View style={styles.aboutContent}>
             <Text style={styles.aboutTitle}>{t('modules.about_module', 'About this Module')}</Text>
-            <Text style={styles.aboutText}>{moduleDesc}</Text>
+            <HtmlContent html={moduleDesc} baseStyle={{ fontSize: fs(12) }} />
           </View>
         </View>
 

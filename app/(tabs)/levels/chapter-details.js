@@ -20,6 +20,7 @@ import { AppColors } from '../../../constants/Theme';
 import { fetchChapterProgress } from '../../../redux/slices/courseSlice';
 import { formatImageUrl } from '../../../utils/imageUtils';
 import { Image } from 'react-native';
+import HtmlContent from '../../../components/HtmlContent';
 
 const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) => {
   const router = useRouter();
@@ -323,7 +324,7 @@ export default function ChapterDetailsScreen() {
           </View>
           <View style={styles.aboutContent}>
             <Text style={styles.aboutTitle}>{t('levels.about_chapter', 'About this Chapter')}</Text>
-            <Text style={styles.aboutText}>{chapterDesc}</Text>
+            <HtmlContent html={chapterDesc} baseStyle={{ fontSize: fs(12) }} />
           </View>
         </View>
 

@@ -20,6 +20,7 @@ import { AppColors } from '../../../constants/Theme';
 import { fetchLevelProgress, getHierarchyThunk } from '../../../redux/slices/courseSlice';
 import { formatImageUrl } from '../../../utils/imageUtils';
 import { Image } from 'react-native';
+import HtmlContent from '../../../components/HtmlContent';
 
 const ModuleItem = ({ moduleData, isCurrent }) => {
   const router = useRouter();
@@ -318,7 +319,7 @@ export default function LevelDetailsScreen() {
           </View>
           <View style={styles.aboutContent}>
             <Text style={styles.aboutTitle}>{t('levels.about_level', 'About this Level')}</Text>
-            <Text style={styles.aboutText}>{levelDesc}</Text>
+            <HtmlContent html={levelDesc} baseStyle={{ fontSize: fs(12) }} />
           </View>
         </View>
 

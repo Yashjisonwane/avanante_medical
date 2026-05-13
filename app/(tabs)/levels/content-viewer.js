@@ -7,226 +7,39 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { fetchSinglePreview, toggleTopicContentRead } from '../../../redux/slices/courseSlice';
 import { formatImageUrl } from '../../../utils/imageUtils';
+import HtmlContent from '../../../components/HtmlContent';
 
-// ─────────────────────────────────────────────────────────────
-// Simple HTML → React Native renderer (no external library)
-// Handles: <p>, <strong>, <em>, <ol>, <ul>, <li>, <br>, <img>, emojis
-// ─────────────────────────────────────────────────────────────
-const decodeHtmlEntities = (str) => {
-  if (!str) return '';
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ');
-};
-
-const parseInlineHtml = (html) => {
-  // Returns array of text segments with bold/italic flags
-  const segments = [];
-  const regex = /<(strong|em|b|i)>(.*?)<\/\1>|([^<]+)/gs;
-  let match;
-  while ((match = regex.exec(html)) !== null) {
-    if (match[1]) {
-      // bold or italic tag
-      const tag = match[1];
-      segments.push({
-        text: decodeHtmlEntities(match[2].replace(/<[^>]+>/g, '')),
-        bold: tag === 'strong' || tag === 'b',
-        italic: tag === 'em' || tag === 'i',
-      });
-    } else if (match[3]) {
-      const text = decodeHtmlEntities(match[3]);
-      if (text.trim()) segments.push({ text, bold: false, italic: false });
-    }
-  }
-  return segments;
-};
-
-const InlineText = ({ html, style }) => {
-  const segments = parseInlineHtml(html || '');
+const HtmlRenderer = ({ html }) => {
   return (
-    <Text style={style}>
-      {segments.map((seg, i) => (
-        <Text
-          key={i}
-          style={[
-            seg.bold && { fontWeight: '700' },
-            seg.italic && { fontStyle: 'italic' },
-          ]}
-        >
-          {seg.text}
-        </Text>
-      ))}
-    </Text>
+    <HtmlContent 
+      html={html} 
+      containerWidth={useWindowDimensions().width - wp(36)}
+    />
   );
 };
 
-const HtmlRenderer = ({ html }) => {
-  if (!html) return null;
-
-  // Split by block-level tags
-  const blocks = [];
-  const blockRegex = /<(p|ol|ul|h[1-6]|br|a)\b[^>]*>([\s\S]*?)<\/\1>|<img\b[^>]*\/?>|<br\s*\/?>/gi;
-  let lastIndex = 0;
-  let match;
-
-  const isImageUrl = (url) => {
-    if (!url) return false;
-    return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url) || 
-           (url.includes('cdn') && (url.includes('image') || url.includes('img')));
-  };
-
-  while ((match = blockRegex.exec(html)) !== null) {
-    // Text before this block
-    const before = html.slice(lastIndex, match.index).trim();
-    if (before && before !== '') {
-      const clean = before.replace(/<[^>]+>/g, '').trim();
-      if (clean) {
-        if (isImageUrl(clean)) {
-          blocks.push({ type: 'image', src: clean });
-        } else {
-          blocks.push({ type: 'text', content: clean });
-        }
-      }
-    }
-
-    const tag = match[1]?.toLowerCase();
-    const fullTag = match[0];
-    const inner = match[2] || '';
-
-    if (tag === 'p') {
-      // Split paragraph by img tags to render them as blocks
-      const parts = inner.split(/(<img\b[^>]*\/?>)/gi);
-      parts.forEach(part => {
-        if (part.toLowerCase().startsWith('<img')) {
-          const srcMatch = /src=["']([^"']+)["']/i.exec(part);
-          if (srcMatch) blocks.push({ type: 'image', src: srcMatch[1] });
-        } else {
-          const cleanText = part.replace(/<[^>]+>/g, '').trim();
-          if (cleanText) {
-            if (isImageUrl(cleanText)) {
-              blocks.push({ type: 'image', src: cleanText });
-            } else {
-              blocks.push({ type: 'paragraph', content: part });
-            }
-          }
-        }
-      });
-    } else if (tag === 'ol' || tag === 'ul') {
-      const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-      let liMatch;
-      const items = [];
-      while ((liMatch = liRegex.exec(inner)) !== null) {
-        items.push({ listType: tag === 'ol' ? 'ordered' : 'bullet', content: liMatch[1] });
-      }
-      if (items.length > 0) blocks.push({ type: 'list', items });
-    } else if (tag && tag.startsWith('h')) {
-      blocks.push({ type: 'heading', content: inner, level: parseInt(tag[1]) });
-    } else if (tag === 'a') {
-      const hrefMatch = /href=["']([^"']+)["']/i.exec(fullTag);
-      const href = hrefMatch ? hrefMatch[1] : '';
-      if (isImageUrl(href) || isImageUrl(inner.replace(/<[^>]+>/g, '').trim())) {
-        blocks.push({ type: 'image', src: href || inner.replace(/<[^>]+>/g, '').trim() });
-      } else {
-        blocks.push({ type: 'text', content: inner + (href ? ` (${href})` : '') });
-      }
-    } else if (fullTag.toLowerCase().startsWith('<img')) {
-      const srcMatch = /src=["']([^"']+)["']/i.exec(fullTag);
-      if (srcMatch) {
-        blocks.push({ type: 'image', src: srcMatch[1] });
-      }
-    }
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  // Trailing text
-  const trailing = html.slice(lastIndex).replace(/<[^>]+>/g, '').trim();
-  if (trailing) {
-    if (isImageUrl(trailing)) {
-      blocks.push({ type: 'image', src: trailing });
-    } else {
-      blocks.push({ type: 'text', content: trailing });
-    }
-  }
+const VideoPlayer = ({ url }) => {
+  const player = useVideoPlayer(url, (player) => {
+    player.play();
+  });
 
   return (
-    <View>
-      {blocks.map((block, i) => {
-        if (block.type === 'paragraph') {
-          return (
-            <InlineText
-              key={i}
-              html={block.content}
-              style={htmlStyles.paragraph}
-            />
-          );
-        }
-        if (block.type === 'heading') {
-          return (
-            <InlineText
-              key={i}
-              html={block.content}
-              style={[htmlStyles.paragraph, htmlStyles.heading]}
-            />
-          );
-        }
-        if (block.type === 'text') {
-          return (
-            <Text key={i} style={htmlStyles.paragraph}>
-              {decodeHtmlEntities(block.content)}
-            </Text>
-          );
-        }
-        if (block.type === 'image') {
-          return (
-            <View key={i} style={htmlStyles.imageContainer}>
-              <Image
-                source={formatImageUrl(block.src)}
-                style={htmlStyles.image}
-                resizeMode="contain"
-              />
-            </View>
-          );
-        }
-        if (block.type === 'list') {
-          let counter = 0;
-          return (
-            <View key={i} style={htmlStyles.listBlock}>
-              {block.items.map((item, j) => {
-                const isOrdered = item.listType === 'ordered';
-                if (isOrdered) counter++;
-                const bullet = isOrdered ? `${counter}.` : '•';
-                const cleanContent = item.content
-                  .replace(/<span[^>]*>[\s\S]*?<\/span>/gi, '')
-                  .trim();
-                return (
-                  <View key={j} style={htmlStyles.listItem}>
-                    <Text style={htmlStyles.bullet}>{bullet}</Text>
-                    <InlineText
-                      html={cleanContent}
-                      style={htmlStyles.listItemText}
-                    />
-                  </View>
-                );
-              })}
-            </View>
-          );
-        }
-        return null;
-      })}
-    </View>
+    <VideoView
+      style={styles.videoPlayer}
+      player={player}
+      allowsFullscreen
+      allowsPictureInPicture
+    />
   );
 };
 
@@ -355,18 +168,25 @@ export default function ContentViewerScreen() {
         <Text style={styles.subtitle}>{topicData.description || topicData.title || ''}</Text>
 
         <View style={styles.contentBox}>
-          {isMedia ? (
-            <View style={styles.mediaPlaceholder}>
-              <Ionicons name="videocam-outline" size={ms(48)} color="#94A3B8" />
-              <Text style={styles.mediaPlaceholderText}>
-                Media content will be played here.
-              </Text>
+          {/* 1. Render Media Section (Video or Image) if available */}
+          {isMedia && contentData?.media?.full_url && (
+            <View style={styles.videoWrapper}>
+              <VideoPlayer url={contentData.media.full_url} />
+              <Text style={styles.mediaTitle}>{contentData.media.title}</Text>
+              {contentData.media.description && (
+                <Text style={styles.mediaDescription}>{contentData.media.description}</Text>
+              )}
+              {/* Divider if there is also text content below */}
+              {contentData.content && <View style={styles.contentDivider} />}
             </View>
-          ) : contentData.content ? (
-            <HtmlRenderer html={contentData.content} />
-          ) : (
-            <Text style={styles.emptyContent}>No content available.</Text>
           )}
+
+          {/* 2. Render HTML Content (Text, Tables, Images) if available */}
+          {contentData.content ? (
+            <HtmlRenderer html={contentData.content} />
+          ) : !isMedia ? (
+            <Text style={styles.emptyContent}>No content available.</Text>
+          ) : null}
         </View>
 
         {/* Auto-marking logic handles this now */}
@@ -633,6 +453,35 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     marginRight: wp(8),
+  },
+  videoWrapper: {
+    width: '100%',
+    borderRadius: ms(12),
+    overflow: 'hidden',
+  },
+  videoPlayer: {
+    width: '100%',
+    height: hp(220),
+    backgroundColor: '#000',
+    borderRadius: ms(12),
+  },
+  mediaTitle: {
+    fontSize: fs(16),
+    fontWeight: '700',
+    color: '#1E293B',
+    marginTop: hp(12),
+  },
+  mediaDescription: {
+    fontSize: fs(13),
+    color: '#64748B',
+    marginTop: hp(4),
+    lineHeight: fs(18),
+  },
+  contentDivider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: hp(20),
+    width: '100%',
   },
 });
 
