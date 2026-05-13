@@ -17,7 +17,7 @@ import { AppColors } from '../../../constants/Theme';
 import { fetchTopicContent, toggleTopicContentRead, fetchTopicProgress } from '../../../redux/slices/courseSlice';
 import i18n from '../../../i18n';
 
-const ContentCard = ({ item, topicId }) => {
+const ContentCard = ({ item, topicId, index }) => {
   const router = useRouter();
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -81,10 +81,10 @@ const ContentCard = ({ item, topicId }) => {
 
       <View style={styles.cardBody}>
         <Text style={styles.contentTitle} numberOfLines={2}>
-          {item.title}
+          {item.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
         </Text>
         <Text style={styles.contentSubtitle}>
-          {t('levels.topic', 'Topic')} {item.order || item.id}
+          {t('levels.topic', 'Topic')} {index + 1}
         </Text>
       </View>
 
@@ -139,9 +139,11 @@ export default function TopicDetailsScreen() {
     (topicData.quiz && topicData.quiz.id) ||
     (topicData.id && (topicData.assessment_id || topicData.quiz_id || topicData.assessment || topicData.quiz) ? topicData.id : null);
 
-  // If we have a topic, but no explicit quiz ID, check if the topic itself can be a quiz
-  // For safety, let's use the ID if we are sure it's intended to be a quiz
-  const finalAssessmentId = assessmentId || (topicData.id && (topicData.has_assessment || topicData.has_quiz) ? topicData.id : null);
+  const finalAssessmentId = assessmentId || 
+                            topicData.assessment_id || 
+                            topicData.quiz_id || 
+                            (typeof topicData.assessment === 'object' ? topicData.assessment?.id : topicData.assessment) ||
+                            (typeof topicData.quiz === 'object' ? topicData.quiz?.id : topicData.quiz);
 
   const handleQuizPress = () => {
     const quizIdToUse = finalAssessmentId || id;
@@ -183,7 +185,7 @@ export default function TopicDetailsScreen() {
         >
           <View style={styles.gridContainer}>
             {contentList.map((item, index) => (
-              <ContentCard key={item.id?.toString() || index.toString()} item={item} topicId={id} />
+              <ContentCard key={item.id?.toString() || index.toString()} item={item} topicId={id} index={index} />
             ))}
           </View>
 
@@ -192,7 +194,7 @@ export default function TopicDetailsScreen() {
               {t('common.showing', 'Showing')} {contentList.length} {t('levels.of', 'of')} {totalContent} {t('levels.topics', 'topics')}
             </Text>
 
-            {isAllRead && !(topicData.is_completed || topicData.is_passed) && (
+            {isAllRead && finalAssessmentId && !(topicData.is_completed || topicData.is_passed) && (
               <TouchableOpacity
                 style={styles.quizBtn}
                 onPress={handleQuizPress}

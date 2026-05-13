@@ -84,12 +84,15 @@ export default function AnalyticsScreen() {
   const { t } = useTranslation();
 
   const { dashboard, loading } = useSelector((state) => state.course);
+  const { isAuthenticated } = useSelector((state) => state.auth);
   const stats = dashboard?.stats || {};
 
   useFocusEffect(
     React.useCallback(() => {
-      dispatch(fetchDashboard());
-    }, [dispatch])
+      if (isAuthenticated) {
+        dispatch(fetchDashboard());
+      }
+    }, [dispatch, isAuthenticated])
   );
 
 

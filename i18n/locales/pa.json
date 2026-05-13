@@ -279,6 +279,8 @@
   "assessment": {
     "quiz": "ਕਵਿਜ਼",
     "exam": "ਪ੍ਰੀਖਿਆ",
+    "quiz_assessment": "ਕਵਿਜ਼ ਮੁਲਾਂਕਣ",
+    "exam_assessment": "ਪ੍ਰੀਖਿਆ ਮੁਲਾਂਕਣ",
     "type": "ਮੁਲਾਂਕਣ",
     "score_percent": "ਸਕੋਰ / ਪ੍ਰਤੀਸ਼ਤ",
     "status": "ਸਥਿਤੀ",

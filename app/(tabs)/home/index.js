@@ -30,7 +30,7 @@ const LANGUAGES = [
   { code: 'pa', label: 'ਪੰਜਾਬੀ', nativeLabel: 'PA' },
 ];
 
-const ModuleItem = ({ mod, chapters }) => {
+const ModuleItem = ({ mod, chapters, index }) => {
   const [expanded, setExpanded] = useState(false);
   const { t } = useTranslation();
   
@@ -43,10 +43,12 @@ const ModuleItem = ({ mod, chapters }) => {
       >
         <View style={styles.modHeaderLeft}>
           <Ionicons name="layers" size={16} color={AppColors.success} />
-          <Text style={styles.modTitle}>
-            {mod.module_title?.replace('Module', t('home.module', 'Module'))} 
-            <Text style={styles.modSubLabel}> ({mod.completed_topics}/{mod.total_topics} {t('levels.topics', 'topics')})</Text>
-          </Text>
+          <View style={{ flex: 1, marginLeft: wp(8) }}>
+            <Text style={styles.modTitle}>
+              {t('home.module', 'Module')} {index + 1}: {mod.module_title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')} 
+            </Text>
+            <Text style={styles.modSubLabel}>({mod.completed_topics}/{mod.total_topics} {t('levels.topics', 'topics')})</Text>
+          </View>
         </View>
         <View style={styles.modHeaderRight}>
           <Text style={[styles.modValue, { color: AppColors.success }]}>{Number(mod.progress_percent).toFixed(0)}%</Text>
@@ -66,12 +68,12 @@ const ModuleItem = ({ mod, chapters }) => {
              <Ionicons name="copy" size={14} color="#A855F7" />
              <Text style={styles.chaptersHeaderText}>{t('home.chapters', 'Chapters')}</Text>
           </View>
-          {chapters?.map((chapter) => (
+          {chapters?.map((chapter, cIndex) => (
             <View key={chapter.chapter_id} style={styles.chapterRow}>
               <View style={styles.chapterLeft}>
                 <Ionicons name="copy" size={14} color="#A855F7" />
                 <Text style={styles.chapterTitle}>
-                  {chapter.chapter_title} 
+                  {t('levels.chapter', 'Chapter')} {cIndex + 1}: {chapter.chapter_title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')} 
                   <Text style={styles.chapterSubLabel}> ({chapter.completed_topics}/{chapter.total_topics} {t('levels.topics', 'topics')})</Text>
                 </Text>
               </View>
@@ -128,7 +130,7 @@ export default function HomeScreen() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   
-  const { user, language: currentLang } = useSelector((state) => state.auth);
+  const { user, language: currentLang, isAuthenticated, isHydrated } = useSelector((state) => state.auth);
   const { levels, loading, dashboard } = useSelector((state) => state.course);
   const { unreadCount } = useSelector((state) => state.notifications);
 
@@ -148,17 +150,21 @@ export default function HomeScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      dispatch(fetchDashboard());
-      dispatch(getHierarchyThunk());
-      dispatch(fetchUnreadCount());
-      dispatch(fetchProfile());
-    }, [dispatch, currentLang])
+      if (isAuthenticated) {
+        dispatch(fetchDashboard());
+        dispatch(getHierarchyThunk());
+        dispatch(fetchUnreadCount());
+        dispatch(fetchProfile());
+      }
+    }, [dispatch, currentLang, isAuthenticated])
   );
 
   useEffect(() => {
-    dispatch(fetchDashboard());
-    dispatch(getHierarchyThunk());
-  }, [currentLang, dispatch]);
+    if (isHydrated && isAuthenticated) {
+      dispatch(fetchDashboard());
+      dispatch(getHierarchyThunk());
+    }
+  }, [currentLang, dispatch, isHydrated, isAuthenticated]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -204,8 +210,12 @@ export default function HomeScreen() {
             <Text style={styles.heroBadge}>
               {currentLearning.program?.title} • {currentLearning.level?.title}
             </Text>
-            <Text style={styles.heroModuleTitle}>{currentLearning.module?.title?.replace('Module', t('home.module', 'Module'))}</Text>
-            <Text style={styles.heroTopicTitle}>{t('home.current_topic_label', 'Current Topic')}: {currentLearning.topic?.title?.replace('Topic', t('levels.topic', 'Topic'))}</Text>
+            <Text style={styles.heroModuleTitle}>
+              {currentLearning.module?.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+            </Text>
+            <Text style={styles.heroTopicTitle}>
+              {t('home.current_topic_label', 'Current Topic')}: {currentLearning.topic?.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+            </Text>
             
             <View style={styles.heroProgressBarContainer}>
               <View style={[styles.heroProgressBar, { width: `${progressPercent}%` }]} />
@@ -214,7 +224,9 @@ export default function HomeScreen() {
             
             <View style={styles.topicBadge}>
                <Ionicons name="bookmark" size={ms(12)} color="#fff" />
-               <Text style={styles.topicBadgeText}>{currentLearning.chapter?.title}</Text>
+               <Text style={styles.topicBadgeText}>
+                 {currentLearning.chapter?.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+               </Text>
             </View>
 
             <View style={styles.subProgressSection}>
@@ -297,8 +309,10 @@ export default function HomeScreen() {
               <Ionicons name="shield" size={ms(20)} color={AppColors.primary} />
             </View>
             <View style={styles.topicBody}>
-              <Text style={styles.topicName}>{currentLearning.topic?.title}</Text>
-              <Text style={styles.topicDesc}>{currentLearning.chapter?.title} • {currentLearning.module?.title}</Text>
+              <Text style={styles.topicName}>{currentLearning.topic?.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}</Text>
+              <Text style={styles.topicDesc}>
+                {currentLearning.chapter?.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')} • {currentLearning.module?.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+              </Text>
               <View style={styles.topicProgressBarTrack}>
                 <View style={[styles.topicProgressBarFill, { width: `${currentTopicProgress.progress_percent || 0}%` }]} />
               </View>
@@ -323,7 +337,7 @@ export default function HomeScreen() {
                 />
               </View>
               <View style={styles.contentBody}>
-                <Text style={styles.contentName}>{content.title}</Text>
+                <Text style={styles.contentName}>{content.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}</Text>
                 <Text style={styles.contentType}>{content.type === 'text' ? t('levels.text_topic', 'Text') : t('levels.media_topic', 'Media')}</Text>
               </View>
             </View>
@@ -355,10 +369,11 @@ export default function HomeScreen() {
               </View>
               
               <View style={styles.accordionContainer}>
-                {stats.modules_progress?.map((mod) => (
+                {stats.modules_progress?.map((mod, index) => (
                   <ModuleItem 
                     key={mod.module_id} 
                     mod={mod} 
+                    index={index}
                     chapters={stats.chapters_progress?.filter(c => c.module_id === mod.module_id)} 
                   />
                 ))}
@@ -374,9 +389,9 @@ export default function HomeScreen() {
            {nextAction.topic && (
              <View style={styles.updateItem}>
                 <View style={[styles.upIcon, {backgroundColor: '#EFF6FF'}]}><Ionicons name="locate-outline" size={20} color={AppColors.primary} /></View>
-                <View style={{flex: 1}}>
-                   <Text style={styles.upTitle}>{t('home.next', 'Next')}: {nextAction.topic.title}</Text>
-                   <Text style={styles.upSub}>{nextAction.type === 'quiz' ? t('home.quiz', 'Quiz') : t('levels.topic', 'Topic')} • {t('home.ready_to_start', 'Ready to start')}</Text>
+                <View style={{flex: 1, marginRight: wp(10)}}>
+                   <Text style={styles.upTitle}>{t('home.next', 'Next')}: {nextAction.topic.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}</Text>
+                   <Text style={styles.upSub} numberOfLines={1}>{nextAction.type === 'quiz' ? t('home.quiz', 'Quiz') : t('levels.topic', 'Topic')} • {t('home.ready_to_start', 'Ready to start')}</Text>
                 </View>
                 <TouchableOpacity 
                   onPress={() => {
@@ -607,9 +622,9 @@ const styles = StyleSheet.create({
   accordionContainer: { gap: hp(12) },
   modItemContainer: { backgroundColor: '#F8FAFC', borderRadius: ms(10), padding: wp(12), borderWidth: 1, borderColor: '#F1F5F9' },
   modHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  modTitle: { fontSize: fs(14), fontWeight: '700', color: AppColors.textDark, marginLeft: wp(8) },
-  modSubLabel: { fontSize: fs(10), fontWeight: '500', color: '#94A3B8' },
+  modHeaderLeft: { flexDirection: 'row', alignItems: 'flex-start', flex: 1, marginRight: wp(10) },
+  modTitle: { fontSize: fs(14), fontWeight: '700', color: AppColors.textDark, lineHeight: fs(18) },
+  modSubLabel: { fontSize: fs(11), fontWeight: '500', color: '#94A3B8', marginTop: hp(2) },
   modHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: wp(8) },
   modValue: { fontSize: fs(13), fontWeight: '800' },
   modProgressContainer: { marginTop: hp(10) },

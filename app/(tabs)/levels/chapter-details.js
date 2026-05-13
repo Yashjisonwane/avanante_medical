@@ -8,6 +8,7 @@ import {
   ImageBackground,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +23,7 @@ import { formatImageUrl } from '../../../utils/imageUtils';
 import { Image } from 'react-native';
 import HtmlContent from '../../../components/HtmlContent';
 
-const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) => {
+const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId, index }) => {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -39,7 +40,15 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
   };
 
   const handleQuizPress = () => {
-    const quizId = topicData.assessment_id || topicData.quiz_id || (typeof topicData.quiz === 'object' ? topicData.quiz.id : null) || assessmentId || topicData.id;
+    const quizId = topicData.assessment_id || 
+                   topicData.quiz_id || 
+                   (typeof topicData.assessment === 'object' ? topicData.assessment?.id : topicData.assessment) ||
+                   (typeof topicData.quiz === 'object' ? topicData.quiz?.id : topicData.quiz) ||
+                   assessmentId;
+    if (!quizId) {
+      Alert.alert(t('common.error', 'Error'), t('levels.no_quiz_id', 'Quiz ID not found for this topic.'));
+      return;
+    }
     router.push({
       pathname: '/(tabs)/levels/exam',
       params: { id: quizId }
@@ -49,7 +58,7 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
   const isContentCompleted = topicData.is_content_completed == true || topicData.is_content_completed == 'true' || topicData.is_content_completed == 1;
   const isTopicCompleted = topicData.is_completed == true || topicData.is_completed == 'true' || topicData.is_completed == 1;
 
-  const showQuizBtn = (isContentCompleted || isTopicCompleted);
+  const showQuizBtn = (isContentCompleted || isTopicCompleted) && hasQuiz;
 
   const handleFAQPress = () => {
     router.push({
@@ -85,7 +94,7 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
         </View>
         <View style={styles.topicDetails}>
           <View style={styles.topicHeaderRow}>
-            <Text style={styles.topicMeta}>{t('levels.topic', 'Topic')} {topicData.id}</Text>
+            <Text style={styles.topicMeta}>{t('levels.topic', 'Topic')} {index + 1}</Text>
             {isCompleted ? (
               <View style={styles.badgeCompleted}>
                 <Ionicons name="checkmark-circle" size={ms(10)} color="#10B981" />
@@ -106,7 +115,9 @@ const TopicItem = ({ topicData, isCurrent, allTopicsCompleted, assessmentId }) =
               <Text style={styles.badgeDurationText}>{topicData.estimated_duration || 0} {t('common.min', 'min')}</Text>
             </View>
           </View>
-          <Text style={[styles.topicTitle, !isUnlocked && { color: '#94A3B8' }]} numberOfLines={2}>{topicData.title}</Text>
+          <Text style={[styles.topicTitle, !isUnlocked && { color: '#94A3B8' }]}>
+            {topicData.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+          </Text>
         </View>
       </TouchableOpacity>
 
@@ -250,7 +261,9 @@ export default function ChapterDetailsScreen() {
                     <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
                   </View>
                 </View>
-                <Text style={styles.bannerTitle}>{chapterTitle}</Text>
+                <Text style={styles.bannerTitle}>
+                  {chapterTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                </Text>
                 <Text style={styles.bannerDesc}>{chapterDesc}</Text>
               </View>
             </ImageBackground>
@@ -271,7 +284,9 @@ export default function ChapterDetailsScreen() {
                     <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
                   </View>
                 </View>
-                <Text style={styles.bannerTitle}>{chapterTitle}</Text>
+                <Text style={styles.bannerTitle}>
+                  {chapterTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                </Text>
                 <Text style={styles.bannerDesc}>{chapterDesc}</Text>
               </View>
             </LinearGradient>
@@ -346,6 +361,7 @@ export default function ChapterDetailsScreen() {
               isCurrent={index === currentTopicIndex || (currentTopicIndex === -1 && index === 0)}
               allTopicsCompleted={completedTopicsCount === totalTopicsCount && totalTopicsCount > 0}
               assessmentId={assessmentId}
+              index={index}
             />
           ))}
 
@@ -353,7 +369,7 @@ export default function ChapterDetailsScreen() {
             <TouchableOpacity 
               style={styles.completedQuizBtn}
               onPress={() => {
-                const quizIdToUse = assessmentId || topics[0]?.assessment_id || topics[0]?.quiz_id || id;
+                const quizIdToUse = assessmentId || topics[0]?.assessment_id || topics[0]?.quiz_id || (typeof topics[0]?.assessment === 'object' ? topics[0]?.assessment?.id : topics[0]?.assessment) || (typeof topics[0]?.quiz === 'object' ? topics[0]?.quiz?.id : topics[0]?.quiz) || id;
                 router.push({
                   pathname: '/(tabs)/levels/exam',
                   params: { id: quizIdToUse }
@@ -401,7 +417,9 @@ export default function ChapterDetailsScreen() {
         <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
           <View style={styles.footerTextContainer}>
             <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
-            <Text style={styles.footerSubtitle}>{t('common.next', 'Next')}: {nextTopicToPlay.title}</Text>
+            <Text style={styles.footerSubtitle}>
+              {t('common.next', 'Next')}: {nextTopicToPlay.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.continueBtn}
@@ -712,7 +730,7 @@ const styles = StyleSheet.create({
   topicThumbnail: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
   topicDetails: {
     flex: 1,

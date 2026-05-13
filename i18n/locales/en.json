@@ -274,6 +274,8 @@
   "assessment": {
     "quiz": "Quiz",
     "exam": "Exam",
+    "quiz_assessment": "Quiz Assessment",
+    "exam_assessment": "Exam Assessment",
     "type": "Assessment",
     "score_percent": "Score / Percentage",
     "status": "Status",

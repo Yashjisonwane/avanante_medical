@@ -22,7 +22,8 @@ import { formatImageUrl } from '../../../utils/imageUtils';
 import { Image } from 'react-native';
 import HtmlContent from '../../../components/HtmlContent';
 
-const ChapterItem = ({ chapterData, isCurrent }) => {
+const ChapterItem = ({ chapterData, isCurrent, index }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
   
@@ -64,47 +65,62 @@ const ChapterItem = ({ chapterData, isCurrent }) => {
       isCurrent && styles.chapterCardCurrent,
       !isUnlocked && styles.chapterCardLocked
     ]}>
-      <TouchableOpacity 
-        style={[styles.chapterIconContainer, !isUnlocked && styles.chapterIconContainerLocked]}
-        onPress={handlePress}
-        disabled={!isUnlocked}
-        activeOpacity={0.8}
-      >
-        {chapterData.thumbnail ? (
-          <Image source={formatImageUrl(chapterData.thumbnail)} style={styles.chapterThumbnail} />
-        ) : (
-          isUnlocked ? (
-            <Ionicons name="play" size={ms(24)} color="#2563EB" />
+      <View style={styles.chapterTopSection}>
+        <TouchableOpacity 
+          style={[styles.chapterIconContainer, !isUnlocked && styles.chapterIconContainerLocked]}
+          onPress={handlePress}
+          disabled={!isUnlocked}
+          activeOpacity={0.8}
+        >
+          {chapterData.thumbnail ? (
+            <Image source={formatImageUrl(chapterData.thumbnail)} style={styles.chapterThumbnail} />
           ) : (
-            <Ionicons name="lock-closed" size={ms(20)} color="#94A3B8" />
-          )
-        )}
-      </TouchableOpacity>
-      <View style={styles.chapterDetails}>
-        <View style={styles.chapterHeaderRow}>
-          <Text style={styles.chapterMeta}>{t('levels.chapter', 'Chapter')} {chapterData.id}</Text>
-          {isCompleted ? (
-            <View style={styles.badgeCompleted}>
-              <Ionicons name="checkmark-circle" size={ms(10)} color="#10B981" />
-              <Text style={styles.badgeCompletedText}>{t('common.completed', 'Completed')}</Text>
-            </View>
-          ) : isCurrent ? (
-            <View style={styles.badgeCurrent}>
-              <Text style={styles.badgeCurrentText}>{t('common.current', 'Current')}</Text>
-            </View>
-          ) : !isUnlocked ? (
-            <View style={styles.badgeLocked}>
-              <Ionicons name="lock-closed" size={ms(10)} color="#475569" />
-              <Text style={styles.badgeLockedText}>{t('common.locked', 'Locked')}</Text>
-            </View>
-          ) : null}
+            isUnlocked ? (
+              <Ionicons name="play" size={ms(24)} color="#2563EB" />
+            ) : (
+              <Ionicons name="lock-closed" size={ms(20)} color="#94A3B8" />
+            )
+          )}
+        </TouchableOpacity>
+        <View style={styles.chapterDetails}>
+          <View style={styles.chapterHeaderRow}>
+            <Text style={styles.chapterMeta}>{t('levels.chapter', 'Chapter')} {index + 1}</Text>
+            {isCompleted ? (
+              <View style={styles.badgeCompleted}>
+                <Ionicons name="checkmark-circle" size={ms(10)} color="#10B981" />
+                <Text style={styles.badgeCompletedText}>{t('common.completed', 'Completed')}</Text>
+              </View>
+            ) : isCurrent ? (
+              <View style={styles.badgeCurrent}>
+                <Text style={styles.badgeCurrentText}>{t('common.current', 'Current')}</Text>
+              </View>
+            ) : !isUnlocked ? (
+              <View style={styles.badgeLocked}>
+                <Ionicons name="lock-closed" size={ms(10)} color="#475569" />
+                <Text style={styles.badgeLockedText}>{t('common.locked', 'Locked')}</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={[styles.chapterTitle, !isUnlocked && { color: '#94A3B8' }]}>
+            {chapterData.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+          </Text>
+          <Text 
+            style={styles.chapterDesc} 
+            numberOfLines={isExpanded ? undefined : 3} 
+            ellipsizeMode="tail"
+          >
+            {chapterData.description || `${chapterData.title} description`}
+          </Text>
+          <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)}>
+            <Text style={styles.seeMoreText}>
+              {isExpanded ? t('common.see_less', 'See Less') : t('common.see_more', 'See More')}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.chapterCounts}>{topicsCount} {t('levels.topics', 'topics')} • {completedTopics} {t('levels.completed_label', 'completed')} • {chapterDuration} {t('common.min', 'min')}</Text>
         </View>
-        <Text style={[styles.chapterTitle, !isUnlocked && { color: '#94A3B8' }]} numberOfLines={1}>{chapterData.title}</Text>
-        <Text style={styles.chapterDesc} numberOfLines={1}>{chapterData.description || `${chapterData.title} description`}</Text>
-        <Text style={styles.chapterCounts}>{topicsCount} {t('levels.topics', 'topics')} • {completedTopics} {t('levels.completed_label', 'completed')} • {chapterDuration} {t('common.min', 'min')}</Text>
       </View>
       
-      <View style={styles.chapterActionsColumn}>
+      <View style={styles.chapterActionsRow}>
         <TouchableOpacity 
           style={[styles.faqSmallButton, !isUnlocked && styles.faqSmallButtonLocked]} 
           onPress={handleFAQPress}
@@ -127,7 +143,7 @@ const ChapterItem = ({ chapterData, isCurrent }) => {
             onPress={handlePress}
           >
             <Text style={[styles.actionButtonStartText, isCompleted && { color: '#2563EB' }]}>
-              {isCompleted ? t('common.view', 'View') : t('levels.continue', 'Continue')}
+              {isCompleted ? t('common.review', 'Review') : t('common.continue', 'Continue')}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -244,7 +260,9 @@ export default function ModuleDetailsScreen() {
                     <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
                   </View>
                 </View>
-                <Text style={styles.bannerTitle}>{moduleTitle}</Text>
+                <Text style={styles.bannerTitle}>
+                  {moduleTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                </Text>
                 <Text style={styles.bannerDesc}>{moduleDesc}</Text>
               </View>
             </ImageBackground>
@@ -265,7 +283,9 @@ export default function ModuleDetailsScreen() {
                     <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
                   </View>
                 </View>
-                <Text style={styles.bannerTitle}>{moduleTitle}</Text>
+                <Text style={styles.bannerTitle}>
+                  {moduleTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                </Text>
                 <Text style={styles.bannerDesc}>{moduleDesc}</Text>
               </View>
             </LinearGradient>
@@ -338,6 +358,7 @@ export default function ModuleDetailsScreen() {
               key={item.id}
               chapterData={item}
               isCurrent={index === currentChapterIndex || (currentChapterIndex === -1 && index === 0)}
+              index={index}
             />
           ))}
 
@@ -392,7 +413,9 @@ export default function ModuleDetailsScreen() {
         <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
           <View style={styles.footerTextContainer}>
             <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
-            <Text style={styles.footerSubtitle}>{t('common.next', 'Next')}: {nextChapterToPlay.title}</Text>
+            <Text style={styles.footerSubtitle}>
+              {t('common.next', 'Next')}: {nextChapterToPlay.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+            </Text>
           </View>
           <TouchableOpacity 
             style={styles.continueBtn}
@@ -666,12 +689,10 @@ const styles = StyleSheet.create({
     marginBottom: hp(20),
   },
   chapterCard: {
-    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderRadius: ms(12),
     padding: ms(12),
     marginBottom: hp(12),
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -699,7 +720,7 @@ const styles = StyleSheet.create({
   chapterThumbnail: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
   chapterDetails: {
     flex: 1,
@@ -802,20 +823,29 @@ const styles = StyleSheet.create({
     fontSize: fs(12),
     fontWeight: '600',
   },
-  chapterActionsColumn: {
-    gap: hp(8),
-    alignItems: 'flex-end',
+  chapterTopSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: hp(12),
+  },
+  chapterActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: wp(10),
+    paddingTop: hp(8),
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
   faqSmallButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF7ED',
-    paddingHorizontal: wp(8),
-    paddingVertical: hp(6),
-    borderRadius: ms(6),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(8),
+    borderRadius: ms(8),
     borderWidth: 1,
     borderColor: '#FFEDD5',
-    minWidth: wp(80),
+    minWidth: wp(70),
     justifyContent: 'center',
   },
   faqSmallButtonLocked: {
@@ -902,5 +932,12 @@ const styles = StyleSheet.create({
     fontSize: fs(16),
     fontWeight: '700',
     marginLeft: wp(8),
+  },
+  seeMoreText: {
+    fontSize: fs(12),
+    color: '#3B82F6',
+    fontWeight: '700',
+    marginTop: hp(4),
+    marginBottom: hp(8),
   },
 });

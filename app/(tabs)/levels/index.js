@@ -39,7 +39,7 @@ const LevelCard = ({
           <Image 
             source={formatImageUrl(image)} 
             style={[styles.levelImage, locked && styles.levelImageLocked]} 
-            resizeMode="cover" 
+            resizeMode="contain" 
           />
         ) : (
           <LinearGradient 
@@ -130,11 +130,14 @@ export default function LevelsScreen() {
   const { t } = useTranslation();
   
   const { levels, loading, error } = useSelector((state) => state.course);
+  const { isAuthenticated, isHydrated } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('All');
 
   useEffect(() => {
-    dispatch(getHierarchyThunk());
-  }, [dispatch]);
+    if (isHydrated && isAuthenticated) {
+      dispatch(getHierarchyThunk());
+    }
+  }, [dispatch, isHydrated, isAuthenticated]);
 
   useEffect(() => {
     let backHandlerSubscription = null;
@@ -145,7 +148,9 @@ export default function LevelsScreen() {
 
     const unsubscribeFocus = navigation.addListener('focus', () => {
       backHandlerSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      dispatch(getHierarchyThunk());
+      if (isAuthenticated) {
+        dispatch(getHierarchyThunk());
+      }
     });
 
     const unsubscribeBlur = navigation.addListener('blur', () => {

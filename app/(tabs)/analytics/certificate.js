@@ -719,11 +719,13 @@ const styles = StyleSheet.create({
     width: wp(180),
     height: hp(60),
     marginBottom: hp(10),
+    resizeMode: 'contain',
   },
   signatureImage: {
     width: wp(120),
     height: hp(50),
     marginBottom: hp(5),
+    resizeMode: 'contain',
   },
   sigLine: {
     height: 1,

@@ -81,6 +81,7 @@ export default function ExamScreen() {
   const [showTimeExpiredModal, setShowTimeExpiredModal] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [initError, setInitError] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     const initExam = async () => {
@@ -108,11 +109,18 @@ export default function ExamScreen() {
 
         if (attemptId) {
           try {
-            await dispatch(fetchAssessmentQuestions({ assessmentId: assessment_id, attemptId })).unwrap();
+            const questionsResult = await dispatch(fetchAssessmentQuestions({ assessmentId: assessment_id, attemptId })).unwrap();
+            const qList = questionsResult?.data?.questions || questionsResult?.questions || [];
+            if (qList.length === 0) {
+              setInitError("This quiz has no questions available.");
+            }
           } catch (e) {
             console.log("Fetch questions failed:", e);
             setInitError(e.message || "Failed to load quiz questions.");
           }
+        } else {
+           // If we got here and still no attemptId, it's an error
+           if (!initError) setInitError("Could not start or resume assessment. Please try again.");
         }
       } else {
         setInitError("Invalid Quiz ID");
@@ -191,10 +199,11 @@ export default function ExamScreen() {
 
   const handleAnswer = async (optionId) => {
     // If clicking the same option, allow deselecting (setting to null)
-    const newOptionId = selectedOptionId === optionId ? null : optionId;
+    const newOptionId = selectedOptionId == optionId ? null : optionId;
 
     // 1. Update local UI state immediately for instant feedback
     setSelectedOptionId(newOptionId);
+    setIsSyncing(true);
 
     // 2. Update Redux store so the answer persists when navigating prev/next
     dispatch(updateQuestionAnswer({
@@ -212,12 +221,19 @@ export default function ExamScreen() {
         })).unwrap();
       } catch (e) {
         console.error("Failed to sync answer with server", e);
-        // Optional: Revert local state on failure if critical
+      } finally {
+        setIsSyncing(false);
       }
+    } else {
+      setIsSyncing(false);
     }
   };
 
   const handleSubmit = () => {
+    if (isSyncing) {
+      Alert.alert(t('exam.syncing', 'Saving...'), t('exam.please_wait_sync', 'Please wait while we save your last answer.'));
+      return;
+    }
     Alert.alert(
       t('exam.submit', 'Submit'),
       t('exam.confirm_submit', 'Are you sure you want to submit?'),
@@ -293,22 +309,23 @@ export default function ExamScreen() {
 
   if (loading.assessmentAction && !questions.length) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+      <View style={[styles.container, styles.loaderContainer]}>
+        <ActivityIndicator size="large" color="#1E3A8A" />
+        <Text style={{ marginTop: hp(10), color: '#64748B', fontWeight: '600' }}>{t('exam.loading_questions', 'Loading questions...')}</Text>
       </View>
     );
   }
 
   if (!currentQuestion) {
     return (
-      <View style={styles.loaderContainer}>
-        <Text style={styles.noQuestionsText}>{t('exam.preparing', 'Preparing your quiz...')}</Text>
-        <ActivityIndicator size="small" color="#3B82F6" style={{ marginTop: hp(10) }} />
+      <View style={[styles.container, styles.loaderContainer]}>
+        <ActivityIndicator size="large" color="#1E3A8A" />
+        <Text style={{ marginTop: hp(10), color: '#64748B' }}>{t('exam.initializing', 'Initializing...')}</Text>
       </View>
     );
   }
 
-  const isAnswerSelected = selectedOptionId !== null && selectedOptionId !== undefined;
+  const isAnswerSelected = (selectedOptionId !== null && selectedOptionId !== undefined);
   const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
@@ -506,7 +523,12 @@ export default function ExamScreen() {
                 </View>
               )}
 
-              {isAnswerSelected && (
+              {isSyncing ? (
+                <View style={[styles.answerStatusBadge, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]}>
+                  <ActivityIndicator size="small" color="#0EA5E9" style={{ marginRight: 4 }} />
+                  <Text style={[styles.answerSelectedText, { color: '#0EA5E9' }]}>{t('exam.saving', 'SAVING...')}</Text>
+                </View>
+              ) : isAnswerSelected && (
                 <View style={styles.answerStatusBadge}>
                   <Ionicons name="checkmark-circle" size={ms(12)} color="#10B981" />
                   <Text style={styles.answerSelectedText}>{t('exam.saved', 'SAVED')}</Text>
@@ -578,7 +600,7 @@ export default function ExamScreen() {
                   key={opt.id}
                   index={index}
                   text={opt.text}
-                  selected={selectedOptionId === opt.id}
+                  selected={selectedOptionId == opt.id}
                   onPress={() => handleAnswer(opt.id)}
                 />
               ))}
@@ -602,14 +624,19 @@ export default function ExamScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.navBtnNext}
+                style={[styles.navBtnNext, isSyncing && { opacity: 0.7 }]}
                 onPress={handleNext}
                 activeOpacity={0.8}
+                disabled={isSyncing}
               >
                 <Text style={styles.navBtnNextText}>
                   {currentQuestionIndex === questions.length - 1 ? t('exam.submit', 'Submit') : t('exam.next', 'Next')}
                 </Text>
-                <Ionicons name="chevron-forward" size={ms(16)} color="#fff" />
+                {isSyncing ? (
+                  <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 6 }} />
+                ) : (
+                  <Ionicons name="chevron-forward" size={ms(16)} color="#fff" />
+                )}
               </TouchableOpacity>
             </View>
           </View>

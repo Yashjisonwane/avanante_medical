@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: hp(40) },
   avatarSection: { alignItems: 'center', paddingTop: hp(30), paddingBottom: hp(25), backgroundColor: AppColors.backgroundWhite },
   avatarWrapper: { width: wp(100), height: wp(100), marginBottom: hp(16), position: 'relative' },
-  avatar: { width: wp(100), height: wp(100), borderRadius: wp(50), borderWidth: 3, borderColor: AppColors.badgePrimaryBg },
+  avatar: { width: wp(100), height: wp(100), borderRadius: wp(50), borderWidth: 3, borderColor: AppColors.badgePrimaryBg, resizeMode: 'contain' },
   cameraBtn: { position: 'absolute', bottom: hp(2), right: wp(2), width: wp(32), height: wp(32), borderRadius: wp(16), backgroundColor: AppColors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: AppColors.backgroundWhite, elevation: 4 },
   profileName: { fontSize: fs(22), fontWeight: '800', color: AppColors.textDark, marginBottom: hp(4) },
   profileEmail: { fontSize: fs(13), color: AppColors.textSecondary, fontWeight: '500', marginBottom: hp(16) },

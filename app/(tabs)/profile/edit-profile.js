@@ -361,6 +361,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: ms(50),
+    resizeMode: 'contain',
   },
   cameraBtn: {
     position: 'absolute',

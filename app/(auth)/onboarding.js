@@ -165,9 +165,10 @@ export default function OnboardingScreen() {
     const action = await dispatch(registerUser(payload));
     if (registerUser.fulfilled.match(action)) {
       dispatch(clearAuthMessages());
-      Alert.alert(t('common.success', 'Success'), t('auth.account_created', 'Account created successfully. Please verify your email with the token sent to you.'), [
-        { text: t('auth.verify_now', 'Verify Now'), onPress: () => router.replace('/(auth)/verify-email') }
-      ]);
+      router.replace({
+        pathname: '/(auth)/verify-email',
+        params: { email: form.email }
+      });
       return;
     }
 
@@ -309,7 +310,7 @@ export default function OnboardingScreen() {
               <View style={styles.profileUploadRow}>
                 <View style={styles.avatarWrapper}>
                   {form.profile_image_uri ? (
-                    <Image source={{ uri: form.profile_image_uri }} style={styles.avatar} />
+                    <Image source={{ uri: form.profile_image_uri }} style={styles.avatar} resizeMode="contain" />
                   ) : (
                     <Ionicons name="person" size={ms(30)} color="#CBD5E1" />
                   )}

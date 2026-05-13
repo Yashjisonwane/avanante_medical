@@ -286,6 +286,8 @@
   "assessment": {
     "quiz": "क्विज़",
     "exam": "परीक्षा",
+    "quiz_assessment": "क्विज़ मूल्यांकन",
+    "exam_assessment": "परीक्षा मूल्यांकन",
     "type": "मूल्यांकन",
     "score_percent": "स्कोर / प्रतिशत",
     "status": "स्थिति",

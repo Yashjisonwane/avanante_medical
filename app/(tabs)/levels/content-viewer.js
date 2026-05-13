@@ -20,10 +20,14 @@ import { formatImageUrl } from '../../../utils/imageUtils';
 import HtmlContent from '../../../components/HtmlContent';
 
 const HtmlRenderer = ({ html }) => {
+  const { width } = useWindowDimensions();
+  // subtract screen margins (wp(12)*2 = wp(24)) AND contentBox padding (ms(12)*2)
+  const availableWidth = width - wp(24) - ms(12) * 2;
+  
   return (
     <HtmlContent 
       html={html} 
-      containerWidth={useWindowDimensions().width - wp(36)}
+      containerWidth={availableWidth}
     />
   );
 };
@@ -164,8 +168,7 @@ export default function ContentViewerScreen() {
           )}
         </View>
 
-        <Text style={styles.title}>{contentData.title || 'Untitled'}</Text>
-        <Text style={styles.subtitle}>{topicData.description || topicData.title || ''}</Text>
+        <Text style={styles.title}>{contentData.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '') || 'Untitled'}</Text>
 
         <View style={styles.contentBox}>
           {/* 1. Render Media Section (Video or Image) if available */}
@@ -272,8 +275,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: wp(18),
-    paddingTop: hp(15),
+    padding: wp(12),
+    paddingTop: hp(10),
   },
   badgeRow: {
     flexDirection: 'row',
@@ -347,7 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: ms(16),
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: ms(16),
+    padding: ms(12),
     marginBottom: hp(20),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

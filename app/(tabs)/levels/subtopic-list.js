@@ -32,7 +32,7 @@ const TopicCard = ({
         <Image source={image} style={styles.topicImage} />
         <View style={styles.topicInfo}>
           <View style={styles.titleRow}>
-            <Text style={styles.topicTitle} numberOfLines={2}>{title}</Text>
+            <Text style={styles.topicTitle}>{title}</Text>
             {!locked && status === 'Completed' && (
               <Ionicons name="checkmark-circle" size={ms(24)} color="#17B8A6" />
             )}
@@ -264,13 +264,14 @@ const styles = StyleSheet.create({
     height: wp(60),
     borderRadius: ms(12),
     marginRight: wp(15),
+    resizeMode: 'contain',
   },
   topicInfo: {
     flex: 1,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: hp(4),
   },

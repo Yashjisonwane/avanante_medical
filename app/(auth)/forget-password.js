@@ -158,6 +158,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 60,
     marginBottom: 10,
+    resizeMode: 'contain',
   },
   pageTitle: {
     fontSize: 22,

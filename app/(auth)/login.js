@@ -343,6 +343,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 70,
     marginBottom: 10,
+    resizeMode: 'contain',
   },
   form: {
     width: '100%',

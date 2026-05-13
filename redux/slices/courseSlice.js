@@ -298,9 +298,11 @@ const courseSlice = createSlice({
       // Dashboard Data
       .addCase(fetchDashboard.pending, (state) => {
         state.loading.hierarchy = true;
+        state.error = null;
       })
       .addCase(fetchDashboard.fulfilled, (state, action) => {
         state.loading.hierarchy = false;
+        state.error = null;
         state.dashboard = action.payload.data || action.payload;
       })
       .addCase(fetchDashboard.rejected, (state, action) => {
@@ -309,9 +311,11 @@ const courseSlice = createSlice({
       })
       .addCase(getHierarchyThunk.pending, (state) => {
         state.loading.levels = true;
+        state.error = null;
       })
       .addCase(getHierarchyThunk.fulfilled, (state, action) => {
         state.loading.levels = false;
+        state.error = null;
         const data = action.payload.data || action.payload;
 
         if (data) {

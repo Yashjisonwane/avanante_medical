@@ -252,18 +252,34 @@ export default function AssessmentScreen() {
           style={[styles.tabButton, activeTab === 'analytics' && styles.activeTabButton]}
           onPress={() => setActiveTab('analytics')}
         >
-          <Text style={[styles.tabText, activeTab === 'analytics' && styles.activeTabText]}>
-            {t('home.analytics', { defaultValue: 'Analytics' })}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons 
+              name={activeTab === 'analytics' ? "help-circle" : "help-circle-outline"} 
+              size={ms(18)} 
+              color={activeTab === 'analytics' ? '#fff' : AppColors.primary} 
+              style={{ marginRight: 6 }} 
+            />
+            <Text style={[styles.tabText, activeTab === 'analytics' && styles.activeTabText]}>
+              {t('assessment.quiz_assessment', { defaultValue: 'Quiz Assessment' })}
+            </Text>
+          </View>
         </TouchableOpacity>
         
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'certificate' && styles.activeTabButton]}
           onPress={() => setActiveTab('certificate')}
         >
-          <Text style={[styles.tabText, activeTab === 'certificate' && styles.activeTabText]}>
-            {t('analytics.certificates', { defaultValue: 'Certificate' })}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons 
+              name={activeTab === 'certificate' ? "document-text" : "document-text-outline"} 
+              size={ms(18)} 
+              color={activeTab === 'certificate' ? '#fff' : AppColors.primary} 
+              style={{ marginRight: 6 }} 
+            />
+            <Text style={[styles.tabText, activeTab === 'certificate' && styles.activeTabText]}>
+              {t('assessment.exam_assessment', { defaultValue: 'Exam Assessment' })}
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -273,7 +289,7 @@ export default function AssessmentScreen() {
         ) : error ? (
           <View style={styles.centerBox}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={() => fetchReports(activeTab === 'quiz' ? 'topic' : 'level')}>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => fetchReports(activeTab === 'analytics' ? 'topic' : 'level')}>
               <Text style={styles.retryText}>{t('common.retry', { defaultValue: 'Retry' })}</Text>
             </TouchableOpacity>
           </View>
