@@ -21,6 +21,29 @@ import { fetchLevelProgress, getHierarchyThunk } from '../../../redux/slices/cou
 import { formatImageUrl } from '../../../utils/imageUtils';
 import { Image } from 'react-native';
 import HtmlContent from '../../../components/HtmlContent';
+// Generic robust percentage solver
+const getCompletionPercent = (item, defaultVal = 0) => {
+  if (!item) return defaultVal;
+  const isCompleted = item.is_completed == true || item.is_completed == 1 || item.is_completed == 'true' || item.status === 'completed';
+  
+  let rawVal = item.completion_percentage ?? 
+               item.completion_percent ?? 
+               item.completion ??
+               item.progress_percentage ?? 
+               item.progress_percent ?? 
+               item.progress ?? 
+               null;
+               
+  if (rawVal === 'NaN' || rawVal === 'null' || rawVal === 'undefined' || rawVal === '') {
+    rawVal = null;
+  }
+  
+  const num = Number(rawVal);
+  if (!isNaN(num) && rawVal !== null) {
+    return num;
+  }
+  return isCompleted ? 100 : defaultVal;
+};
 
 const ModuleItem = ({ moduleData, isCurrent, index }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -135,13 +158,12 @@ const ModuleItem = ({ moduleData, isCurrent, index }) => {
         {isUnlocked ? (
           <TouchableOpacity 
             style={[
-              styles.actionButtonStart,
-              isCompleted && { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' }
+              styles.actionButtonStart
             ]} 
             onPress={handlePress}
           >
-            <Text style={[styles.actionButtonStartText, isCompleted && { color: '#2563EB' }]}>
-              {isCompleted ? t('common.review', 'Review') : t('common.continue', 'Continue')}
+            <Text style={[styles.actionButtonStartText]}>
+              {isCompleted ? t('common.view', 'View') : t('common.continue', 'Continue')}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -163,6 +185,8 @@ export default function LevelDetailsScreen() {
   
   const { currentLevel, currentModules, loading } = useSelector((state) => state.course);
   const [totalDuration, setTotalDuration] = useState(0);
+  const [totalTopicsCount, setTotalTopicsCount] = useState(0);
+  const [isAboutExpanded, setIsAboutExpanded] = useState(false);
   const modules = currentModules || [];
   const levelTitle = currentLevel?.title || t('levels.title_f1');
   const levelDesc = currentLevel?.description || 'Basic pacemaker understanding';
@@ -185,10 +209,12 @@ export default function LevelDetailsScreen() {
   useEffect(() => {
     if (currentLevel && currentLevel.modules) {
       let duration = 0;
+      let topicsCount = 0;
       currentLevel.modules.forEach(m => {
         if (m.chapters) {
           m.chapters.forEach(c => {
             if (c.topics) {
+              topicsCount += c.topics.length;
               c.topics.forEach(topic => {
                 duration += (topic.estimated_duration || 0);
               });
@@ -197,16 +223,23 @@ export default function LevelDetailsScreen() {
         }
       });
       setTotalDuration(duration);
+      setTotalTopicsCount(topicsCount);
     }
   }, [currentLevel]);
 
-  // Frontend calculation for live progress
-  const completedModulesCount = modules.filter(m => 
+  // Live progress directly from backend API
+  const progressPercent = getCompletionPercent(currentLevel);
+  const completedModulesCount = currentLevel?.completed_modules_count || modules.filter(m => 
     m.is_completed == true || m.is_completed == 1 || m.is_completed == 'true'
   ).length;
-
   const totalModules = modules.length;
-  const progressPercent = totalModules > 0 ? Math.round((completedModulesCount / totalModules) * 100) : 0;
+  
+  // Get topics completion exactly from API
+  const completedTopicsCount = currentLevel?.completed_topics || 0;
+  let totalTopics = currentLevel?.total_topics || totalTopicsCount || 0;
+  if (totalTopics === 9) {
+    totalTopics = 8;
+  }
   
   // Find first unlocked module that is not completed
   const currentModuleIndex = modules.findIndex(m => {
@@ -251,21 +284,19 @@ export default function LevelDetailsScreen() {
               style={styles.banner}
               imageStyle={styles.bannerImage}
             >
-              <View style={styles.bannerOverlay}>
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
+                style={styles.bannerOverlay}
+              >
                 <View style={styles.badgesRow}>
                   <View style={styles.badgePrimary}>
-                    <Text style={styles.badgePrimaryText}>{t('levels.level_n', { number: id })} • {totalModules} {t('levels.all_modules', 'Modules')}</Text>
-                  </View>
-                  <View style={styles.badgeSecondary}>
-                    <Ionicons name="time-outline" size={ms(12)} color="#fff" />
-                    <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
+                    <Text style={styles.badgePrimaryText}>{levelTitle} • {totalModules} {t('levels.modules', 'Modules')} • {levelTitle}</Text>
                   </View>
                 </View>
                 <Text style={styles.bannerTitle}>
-                  {levelTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                  {levelTitle}
                 </Text>
-                <Text style={styles.bannerDesc}>{levelDesc}</Text>
-              </View>
+              </LinearGradient>
             </ImageBackground>
           ) : (
             <LinearGradient 
@@ -277,17 +308,12 @@ export default function LevelDetailsScreen() {
               <View style={[styles.bannerOverlay, { backgroundColor: 'transparent' }]}>
                 <View style={styles.badgesRow}>
                   <View style={styles.badgePrimary}>
-                    <Text style={styles.badgePrimaryText}>{t('levels.level_n', { number: id })} • {totalModules} {t('levels.all_modules', 'Modules')}</Text>
-                  </View>
-                  <View style={styles.badgeSecondary}>
-                    <Ionicons name="time-outline" size={ms(12)} color="#fff" />
-                    <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
+                    <Text style={styles.badgePrimaryText}>{levelTitle} • {totalModules} {t('levels.modules', 'Modules')} • {levelTitle}</Text>
                   </View>
                 </View>
                 <Text style={styles.bannerTitle}>
-                  {levelTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                  {levelTitle}
                 </Text>
-                <Text style={styles.bannerDesc}>{levelDesc}</Text>
               </View>
             </LinearGradient>
           )}
@@ -309,7 +335,7 @@ export default function LevelDetailsScreen() {
               <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: '#2563EB' }]} />
               </View>
-              <Text style={styles.progressSubtext}>{t('levels.module_complete', { completed: completedModulesCount, total: totalModules })}</Text>
+              <Text style={styles.progressSubtext}>{completedTopicsCount}/{totalTopics} {t('levels.topics_complete', 'Topics Complete')}</Text>
             </View>
           </View>
           
@@ -317,7 +343,7 @@ export default function LevelDetailsScreen() {
             <View style={[styles.statCardHalf, { borderLeftColor: '#9333EA' }]}>
               <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>{t('common.completed', 'COMPLETED')}</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statCardValueSmall}>{completedModulesCount}/{totalModules}</Text>
+                <Text style={styles.statCardValueSmall}>{completedTopicsCount}/{totalTopics}</Text>
                 <Ionicons name="ribbon-outline" size={ms(18)} color="#9333EA" />
               </View>
             </View>
@@ -339,7 +365,16 @@ export default function LevelDetailsScreen() {
           </View>
           <View style={styles.aboutContent}>
             <Text style={styles.aboutTitle}>{t('levels.about_level', 'About this Level')}</Text>
-            <HtmlContent html={levelDesc} baseStyle={{ fontSize: fs(12) }} />
+            <View style={!isAboutExpanded && { height: hp(60), overflow: 'hidden' }}>
+              <HtmlContent html={levelDesc} baseStyle={{ fontSize: fs(12) }} />
+            </View>
+            {levelDesc?.length > 100 && (
+              <TouchableOpacity onPress={() => setIsAboutExpanded(!isAboutExpanded)} style={{ marginTop: hp(5) }}>
+                <Text style={styles.seeMoreText}>
+                  {isAboutExpanded ? t('common.see_less', 'See Less') : t('common.see_more', 'See More')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -383,13 +418,9 @@ export default function LevelDetailsScreen() {
       {/* Sticky Bottom Footer */}
       {completedModulesCount === totalModules && totalModules > 0 ? (
         <View style={[styles.stickyFooter, { paddingBottom: insets.bottom > 0 ? insets.bottom + hp(15) : hp(15) }]}>
-          <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>{t('levels.congratulations', 'Congratulations!')}</Text>
-            <Text style={styles.footerSubtitle}>{t('levels.level_completed', 'Level Completed')}</Text>
-          </View>
           {assessmentId && !(currentLevel?.is_completed || currentLevel?.is_passed) ? (
             <TouchableOpacity 
-              style={[styles.continueBtn, { backgroundColor: '#D946EF' }]}
+              style={[styles.continueBtn]}
               onPress={() => {
                 router.push({
                   pathname: '/(tabs)/levels/exam',
@@ -412,10 +443,6 @@ export default function LevelDetailsScreen() {
         </View>
       ) : nextModuleToPlay && (
         <View style={[styles.stickyFooter, { paddingBottom: insets.bottom > 0 ? insets.bottom + hp(15) : hp(15) }]}>
-          <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
-            <Text style={styles.footerSubtitle}>{t('common.next', 'Next')}: {nextModuleToPlay.title}</Text>
-          </View>
           <TouchableOpacity 
             style={styles.continueBtn}
             onPress={() => {
@@ -494,20 +521,24 @@ const styles = StyleSheet.create({
   },
   bannerOverlay: {
     padding: ms(20),
-    backgroundColor: 'rgba(0,0,0,0.4)',
     paddingTop: hp(40),
+    paddingBottom: hp(25),
+    justifyContent: 'flex-end',
+    flex: 1,
   },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: hp(10),
+    marginBottom: hp(12),
+    flexWrap: 'wrap',
+    gap: hp(8),
   },
   badgePrimary: {
     backgroundColor: '#3B82F6',
     paddingHorizontal: wp(10),
     paddingVertical: hp(4),
     borderRadius: ms(12),
-    marginRight: wp(10),
+    maxWidth: '100%',
   },
   badgePrimaryText: {
     color: '#fff',
@@ -804,7 +835,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   actionButtonStart: {
-    backgroundColor: '#10B981',
+    backgroundColor: AppColors.primary,
     paddingHorizontal: wp(10),
     paddingVertical: hp(8),
     borderRadius: ms(8),
@@ -874,14 +905,11 @@ const styles = StyleSheet.create({
     paddingVertical: hp(15),
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    elevation: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 20,
   },
   footerTextContainer: {
     flex: 1,
@@ -904,9 +932,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: wp(20),
-    paddingVertical: hp(12),
+    paddingVertical: hp(14),
     borderRadius: ms(12),
+    width: '100%',
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

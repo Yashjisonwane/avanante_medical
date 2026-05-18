@@ -22,6 +22,14 @@ export default function ForgetPasswordScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { actionLoading, errorMessage } = useSelector((state) => state.auth);
+
+  React.useEffect(() => {
+    dispatch(clearAuthMessages());
+    return () => {
+      dispatch(clearAuthMessages());
+    };
+  }, [dispatch]);
+
   const [email, setEmail] = useState('');
 
   const handleForgotPassword = async () => {

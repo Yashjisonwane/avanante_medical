@@ -6,11 +6,11 @@
 
 export const AppColors = {
   // ─── Primary Colors ─────────────────────────────────
-  primaryDark: '#1E3A8A',     // Dark Blue - Headers, Primary backgrounds
-  primary: '#2563EB',         // Blue - Buttons, Links, Active states
+  primaryDark: '#2563EB',     // Royal Blue - Headers, Primary backgrounds
+  primary: '#2563EB',         // Royal Blue - Buttons, Links, Active states
   
   // ─── Accent / Teal ──────────────────────────────────
-  teal: '#14B8A6',            // Teal - Success buttons, Progress bars, CTAs
+  teal: '#2563EB',            // Unified to Primary Blue
   
   // ─── Background Colors ──────────────────────────────
   backgroundLight: '#F1F5F9', // Light Gray - Screen backgrounds
@@ -22,7 +22,7 @@ export const AppColors = {
   textWhite: '#FFFFFF',       // White text on dark backgrounds
   
   // ─── Status Colors ──────────────────────────────────
-  success: '#22C55E',         // Green - Completed, Success states
+  success: '#2563EB',         // Unified to Primary Blue
   warning: '#F59E0B',         // Amber - Warning, Skip, Pending states
   danger: '#EF4444',          // Red - Error, Logout, Delete
   

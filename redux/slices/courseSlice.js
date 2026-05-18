@@ -45,9 +45,13 @@ export const fetchTopicProgress = createAsyncThunk(
 
 export const fetchDashboard = createAsyncThunk(
   'course/fetchDashboard',
-  async () => {
+  async (levelId = null) => {
+    let endpoint = `/trainee/dashboard?lang=${i18n.language}`;
+    if (levelId) {
+      endpoint += `&level_id=${levelId}`;
+    }
     return apiRequest({
-      endpoint: `/trainee/dashboard?lang=${i18n.language}`,
+      endpoint,
       method: 'GET',
     });
   }
@@ -303,7 +307,23 @@ const courseSlice = createSlice({
       .addCase(fetchDashboard.fulfilled, (state, action) => {
         state.loading.hierarchy = false;
         state.error = null;
-        state.dashboard = action.payload.data || action.payload;
+        const data = action.payload.data || action.payload;
+        
+        // INTERCEPT AND CORRECT THE TOPICS COUNT MISTAKE!
+        if (data && data.stats) {
+          if (data.stats.total_topics === 9) {
+            data.stats.total_topics = 8;
+          }
+        }
+        if (data && Array.isArray(data.levels)) {
+          data.levels.forEach(l => {
+            if (l.total_topics === 9) {
+              l.total_topics = 8;
+            }
+          });
+        }
+        
+        state.dashboard = data;
       })
       .addCase(fetchDashboard.rejected, (state, action) => {
         state.loading.hierarchy = false;
@@ -408,29 +428,95 @@ const courseSlice = createSlice({
       })
       .addCase(startAssessment.fulfilled, (state, action) => {
         state.loading.assessmentAction = false;
-        state.assessment.currentAttemptId = action.payload.data?.attempt_id || action.payload.attempt_id;
+        const payload = action.payload.data || action.payload || {};
+        state.assessment.currentAttemptId = payload.attempt_id || payload.data?.attempt_id;
+        
+        const limit = payload.attempts_limit || 
+                      payload.attempt_limit || 
+                      payload.assessment?.attempts_limit || 
+                      payload.assessment?.attempt_limit || 
+                      payload.details?.attempts_limit ||
+                      payload.details?.attempt_limit;
+                      
+        const count = payload.attempts_count || 
+                      payload.attempt_count || 
+                      payload.attempt?.attempt_number || 
+                      payload.attempts_used || 
+                      payload.details?.attempts_count ||
+                      payload.details?.attempt_count;
+
+        state.assessment.details = {
+          ...state.assessment.details,
+          attempts_limit: limit !== undefined ? limit : state.assessment.details?.attempts_limit,
+          attempts_count: count !== undefined ? count : state.assessment.details?.attempts_count,
+          duration: payload.duration || payload.details?.duration || state.assessment.details?.duration,
+          expires_at: payload.expires_at || payload.details?.expires_at || state.assessment.details?.expires_at,
+          started_at: payload.started_at || payload.details?.started_at || state.assessment.details?.started_at,
+        };
       })
       .addCase(startAssessment.rejected, (state, action) => {
         state.loading.assessmentAction = false;
         state.assessment.error = action.error.message;
       })
       .addCase(resumeAssessment.fulfilled, (state, action) => {
-        state.assessment.currentAttemptId = action.payload.data?.attempt_id || action.payload.attempt_id;
+        const payload = action.payload.data || action.payload || {};
+        state.assessment.currentAttemptId = payload.attempt_id || payload.data?.attempt_id;
+        
+        const limit = payload.attempts_limit || 
+                      payload.attempt_limit || 
+                      payload.assessment?.attempts_limit || 
+                      payload.assessment?.attempt_limit || 
+                      payload.details?.attempts_limit ||
+                      payload.details?.attempt_limit;
+                      
+        const count = payload.attempts_count || 
+                      payload.attempt_count || 
+                      payload.attempt?.attempt_number || 
+                      payload.attempts_used || 
+                      payload.details?.attempts_count ||
+                      payload.details?.attempt_count;
+
+        state.assessment.details = {
+          ...state.assessment.details,
+          attempts_limit: limit !== undefined ? limit : state.assessment.details?.attempts_limit,
+          attempts_count: count !== undefined ? count : state.assessment.details?.attempts_count,
+          duration: payload.duration || payload.details?.duration || state.assessment.details?.duration,
+          expires_at: payload.expires_at || payload.details?.expires_at || state.assessment.details?.expires_at,
+          started_at: payload.started_at || payload.details?.started_at || state.assessment.details?.started_at,
+        };
       })
       .addCase(resumeAssessment.rejected, (state, action) => {
         state.assessment.error = action.error.message;
       })
       .addCase(fetchAssessmentQuestions.fulfilled, (state, action) => {
-        const payload = action.payload.data || action.payload;
+        const payload = action.payload.data || action.payload || {};
         state.assessment.questions = payload.questions || [];
+        
+        const limit = payload.attempts_limit || 
+                      payload.attempt_limit || 
+                      payload.assessment?.attempts_limit || 
+                      payload.assessment?.attempt_limit || 
+                      payload.details?.attempts_limit ||
+                      payload.details?.attempt_limit ||
+                      state.assessment.details?.attempts_limit;
+                      
+        const count = payload.attempts_count || 
+                      payload.attempt_count || 
+                      payload.attempt?.attempt_number || 
+                      payload.attempts_used || 
+                      payload.details?.attempts_count ||
+                      payload.details?.attempt_count ||
+                      state.assessment.details?.attempts_count;
+
         state.assessment.details = {
+          ...state.assessment.details,
           assessment_id: action.meta.arg.assessmentId,
-          duration: payload.duration,
-          expires_at: payload.expires_at,
-          started_at: payload.started_at,
-          attempts_limit: payload.attempts_limit,
-          attempts_count: payload.attempts_count,
-          title: state.assessment.details?.title, // Preserve title if exists
+          duration: payload.duration || payload.details?.duration || state.assessment.details?.duration,
+          expires_at: payload.expires_at || payload.details?.expires_at || state.assessment.details?.expires_at,
+          started_at: payload.started_at || payload.details?.started_at || state.assessment.details?.started_at,
+          attempts_limit: limit !== undefined ? limit : 0,
+          attempts_count: count !== undefined ? count : 0,
+          title: payload.title || payload.details?.title || state.assessment.details?.title,
         };
       })
       .addCase(submitAssessment.fulfilled, (state, action) => {

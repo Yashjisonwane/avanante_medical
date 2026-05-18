@@ -23,6 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import i18n from '../../i18n';
 import { clearAuthMessages, registerUser, fetchRoles, fetchDesignations, setLanguage } from '../../redux/slices/authSlice';
 import { wp, hp, ms, fs } from '../../utils/responsive';
+import { AppColors } from '../../constants/Theme';
 import { Image } from 'react-native';
 import * as Device from 'expo-device';
 import { getOrGenerateDeviceId } from '../../redux/api/baseApi';
@@ -89,8 +90,12 @@ export default function OnboardingScreen() {
   const { roles, designations } = useSelector((state) => state.auth);
 
   React.useEffect(() => {
+    dispatch(clearAuthMessages());
     dispatch(fetchRoles());
     dispatch(fetchDesignations());
+    return () => {
+      dispatch(clearAuthMessages());
+    };
   }, [dispatch]);
 
   const updateForm = (key, value) => {
@@ -163,14 +168,11 @@ export default function OnboardingScreen() {
     delete payload.profile_image_uri;
 
     const action = await dispatch(registerUser(payload));
-    if (registerUser.fulfilled.match(action)) {
-      dispatch(clearAuthMessages());
-      router.replace({
-        pathname: '/(auth)/verify-email',
-        params: { email: form.email }
-      });
-      return;
-    }
+      if (registerUser.fulfilled.match(action)) {
+        dispatch(clearAuthMessages());
+        router.replace(`/(auth)/verify-email?email=${encodeURIComponent(form.email)}`);
+        return;
+      }
 
     Alert.alert(t('common.error', 'Error'), action.error?.message || t('auth.registration_failed', 'Unable to create account.'));
   };
@@ -353,8 +355,18 @@ export default function OnboardingScreen() {
 
               <Text style={styles.termsText}>
                 {t('auth.terms_agreement', "By creating an account, you agree to Avante Medical's")}{' '}
-                <Text style={styles.linkText}>{t('auth.terms', 'Terms of Service')}</Text> {t('auth.and', 'and')}{' '}
-                <Text style={styles.linkText}>{t('auth.privacy', 'Privacy Policy')}</Text>.
+                <Text
+                  style={styles.linkText}
+                  onPress={() => router.push({ pathname: '/(auth)/legal', params: { type: 'terms' } })}
+                >
+                  {t('auth.terms', 'Terms of Service')}
+                </Text>{' '}{t('auth.and', 'and')}{' '}
+                <Text
+                  style={styles.linkText}
+                  onPress={() => router.push({ pathname: '/(auth)/legal', params: { type: 'privacy' } })}
+                >
+                  {t('auth.privacy', 'Privacy Policy')}
+                </Text>.
               </Text>
             </View>
           </View>
@@ -601,7 +613,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   registerBtn: {
-    backgroundColor: '#00BFA5',
+    backgroundColor: AppColors.primary,
     width: '100%',
     height: hp(55),
     borderRadius: ms(8),
@@ -641,14 +653,14 @@ const styles = StyleSheet.create({
     height: hp(52),
     borderRadius: ms(8),
     borderWidth: 1.5,
-    borderColor: '#00BFA5',
+    borderColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
     marginBottom: hp(10),
   },
   loginBtnText: {
-    color: '#00BFA5',
+    color: AppColors.primary,
     fontSize: fs(15),
     fontWeight: '700',
   },
@@ -661,7 +673,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(20),
   },
   linkText: {
-    color: '#00BFA5',
+    color: AppColors.primary,
     fontWeight: '600',
   },
   errorText: {

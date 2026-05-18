@@ -153,6 +153,13 @@ export default function TopicDetailsScreen() {
     });
   };
 
+  const handleSupportPress = () => {
+    router.push({
+      pathname: '/(tabs)/levels/support-chat',
+      params: { topicId: id, topicTitle: topicData.title || '' }
+    });
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
@@ -207,6 +214,15 @@ export default function TopicDetailsScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* Support Floating Action Button */}
+      <TouchableOpacity 
+        style={[styles.supportFab, { bottom: insets.bottom + hp(20) }]}
+        onPress={handleSupportPress}
+        activeOpacity={0.9}
+      >
+        <Ionicons name="chatbubbles" size={ms(24)} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -413,4 +429,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: fs(20),
   },
+  supportFab: {
+    position: 'absolute',
+    right: wp(20),
+    backgroundColor: '#3B82F6',
+    width: ms(56),
+    height: ms(56),
+    borderRadius: ms(28),
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 999,
+  }
 });

@@ -13,11 +13,12 @@ import {
 import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { submitAssessmentFeedback, resetAssessment } from '../../../redux/slices/courseSlice';
+import * as ScreenCapture from 'expo-screen-capture';
 
 export default function QuizResultScreen() {
   const insets = useSafeAreaInsets();
@@ -34,6 +35,26 @@ export default function QuizResultScreen() {
   const attempt_id = params.attempt_id || result?.attempt_id;
 
   const [rating, setRating] = useState(0);
+  
+  // Security: Prevent Screenshots on Quiz Result Screen
+  useFocusEffect(
+    React.useCallback(() => {
+      ScreenCapture.preventScreenCaptureAsync();
+      
+      const subscription = ScreenCapture.addScreenshotListener(() => {
+        Alert.alert(
+          t('exam.security_warning', 'Security Warning'),
+          t('exam.screenshot_msg', 'Screenshots are forbidden on this screen.'),
+          [{ text: "OK", style: "cancel" }]
+        );
+      });
+      
+      return () => {
+        subscription.remove();
+        ScreenCapture.allowScreenCaptureAsync();
+      };
+    }, [])
+  );
   const [review, setReview] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -275,7 +296,7 @@ export default function QuizResultScreen() {
               <Ionicons name="ribbon-outline" size={ms(14)} color="#64748B" />
               <Text style={styles.analysisLabel}>{t('exam.attempts_remaining', 'Attempts Remaining')}</Text>
             </View>
-            <Text style={[styles.analysisValue, { color: '#F59E0B' }]}>{(details?.attempts_limit || 0) - (details?.attempts_count || 0)}</Text>
+            <Text style={[styles.analysisValue, { color: '#F59E0B' }]}>{Math.max(0, (details?.attempts_limit || 1) - (details?.attempts_count || 1))}</Text>
           </View>
 
           <View style={[styles.analysisRow, { borderBottomWidth: 0 }]}>

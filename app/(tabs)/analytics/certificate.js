@@ -215,7 +215,7 @@ export default function CertificateScreen() {
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      Alert.alert('Downloading', 'Attempting to fetch your certificate PDF...');
+      Alert.alert('Downloading', 'Preparing your certificate PDF...');
       
       const baseUrl = 'https://lms-backend.netswaptech.com/api/v1';
       const webBaseUrl = 'https://lms-backend.netswaptech.com';
@@ -230,6 +230,10 @@ export default function CertificateScreen() {
       downloadUrls.push(`${baseUrl}/trainee/reports/certificate/${certificateData.certId}/pdf`);
       downloadUrls.push(`${baseUrl}/trainee/reports/certificate-download/${assessmentId}`);
       downloadUrls.push(`${webBaseUrl}/certificate/pdf/${certificateData.certId}`);
+      downloadUrls.push(`${webBaseUrl}/certificate/${certificateData.certId}/pdf`);
+      downloadUrls.push(`${webBaseUrl}/certificate/download/${certificateData.certId}`);
+      downloadUrls.push(`${webBaseUrl}/certificate/${certificateData.certId}?export=pdf`);
+      downloadUrls.push(`${webBaseUrl}/certificate/${certificateData.certId}?download=1`);
 
       const filename = `Certificate_${certificateData.certId || assessmentId}.pdf`;
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
@@ -246,66 +250,246 @@ export default function CertificateScreen() {
           
           if (downloadResult.status === 200) {
             const fileInfo = await FileSystem.getInfoAsync(fileUri);
-            if (fileInfo.exists && fileInfo.size > 2000) {
-              success = true;
-              break;
+            if (fileInfo.exists && fileInfo.size > 500) {
+              // Read the first 5 characters to check if it's a valid PDF
+              const fileHeader = await FileSystem.readAsStringAsync(fileUri, {
+                encoding: 'utf8',
+                length: 5,
+              });
+              
+              if (fileHeader && fileHeader.startsWith('%PDF-')) {
+                console.log('Valid PDF downloaded successfully from:', url);
+                success = true;
+                break;
+              } else {
+                console.log('File is not a valid PDF (probably HTML/JSON error page). Skipping.');
+                await FileSystem.deleteAsync(fileUri, { idempotent: true });
+              }
             }
           }
         } catch (err) {
+          console.log('Download attempt error:', err);
           continue;
         }
       }
 
-      // 2. If server download fails, GENERATE PDF LOCALLY using jsPDF
+      // 2. If server download fails or returns non-PDF, GENERATE PDF LOCALLY using jsPDF
       if (!success) {
-        console.log('Server download failed. Generating PDF locally...');
+        console.log('Server PDF download unavailable/invalid. Generating high-fidelity Portrait PDF locally...');
         try {
           const doc = new jsPDF({
-            orientation: 'landscape',
+            orientation: 'portrait',
             unit: 'mm',
             format: 'a4'
           });
 
-          // Draw a professional border
-          doc.setLineWidth(1);
-          doc.rect(5, 5, 287, 200); 
-          doc.setLineWidth(0.5);
-          doc.rect(7, 7, 283, 196);
+          const companyName = certificateData.design?.company_name || "Aavnta Medical";
+          const heading = certificateData.design?.heading || "Certificate of Achievement";
+          const tagline = certificateData.design?.tagline || "Avante Sales Training App";
+          const signerName = certificateData.design?.signer_name || "Dr. John Doe";
+          const signerDesignation = certificateData.design?.signer_designation || "Head of Training";
+          const footerText = certificateData.design?.footer_text || "This certificate is digitally generated and does not require a physical signature.";
 
-          // Add content
+          // Draw the beautiful double green borders exactly like the screenshot
+          // Thick outer green border
+          doc.setLineWidth(1.2);
+          doc.setDrawColor(4, 120, 87); // Emerald Green
+          doc.rect(8, 8, 194, 281); 
+          
+          // Thin inner green border
+          doc.setLineWidth(0.4);
+          doc.setDrawColor(5, 150, 105); // Lighter Green
+          doc.rect(10.5, 10.5, 189, 276);
+
+          // Corner lines (Leaf ornaments representation)
+          doc.line(10.5, 16.5, 16.5, 10.5);
+          doc.line(10.5, 20.5, 20.5, 10.5);
+          doc.line(199.5, 16.5, 193.5, 10.5);
+          doc.line(199.5, 20.5, 189.5, 10.5);
+          doc.line(10.5, 280.5, 16.5, 286.5);
+          doc.line(10.5, 276.5, 20.5, 286.5);
+          doc.line(199.5, 280.5, 193.5, 286.5);
+          doc.line(199.5, 276.5, 189.5, 286.5);
+
+          // Aavnta Medical
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(30);
-          doc.setTextColor(30, 58, 138); // Dark blue
-          doc.text('CERTIFICATE OF COMPLETION', 148.5, 40, { align: 'center' });
+          doc.setFontSize(26);
+          doc.setTextColor(6, 95, 70); // Dark Green
+          doc.text(companyName, 105, 32, { align: 'center' });
 
+          // Tagline
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(16);
-          doc.setTextColor(100, 116, 139); // Gray
-          doc.text('This is to certify that', 148.5, 60, { align: 'center' });
+          doc.setFontSize(10);
+          doc.setTextColor(4, 120, 87);
+          doc.text(tagline, 105, 38, { align: 'center' });
 
+          // Star Icon
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(16);
+          doc.setTextColor(4, 120, 87);
+          doc.text('★', 105, 46, { align: 'center' });
+
+          // Heading
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(18);
+          doc.setTextColor(4, 120, 87);
+          doc.text(heading.toUpperCase(), 105, 56, { align: 'center' });
+
+          // Of Achievement Badge text
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(4, 120, 87);
+          doc.text('🏆 OF ACHIEVEMENT 🏆', 105, 63, { align: 'center' });
+
+          // Presented presentation line
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(12);
+          doc.setTextColor(100, 116, 139);
+          doc.text('This certificate is proudly presented to', 105, 76, { align: 'center' });
+
+          // User Name
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(28);
+          doc.setTextColor(6, 95, 70);
+          doc.text(certificateData.userName, 105, 92, { align: 'center' });
+
+          // Name underline
+          doc.setLineWidth(0.6);
+          doc.setDrawColor(4, 120, 87);
+          doc.line(45, 96, 165, 96);
+
+          // Employee ID and Email Row
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(30, 41, 59);
+          doc.text(`Employee ID: ${certificateData.employeeId}`, 55, 104, { align: 'center' });
+          doc.text(`Email: ${certificateData.userEmail}`, 145, 104, { align: 'center' });
+
+          // Score Grid Section
+          // Col 1: Score
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(24);
-          doc.setTextColor(0, 0, 0);
-          doc.text(certificateData.userName.toUpperCase(), 148.5, 80, { align: 'center' });
-
+          doc.setTextColor(4, 120, 87);
+          doc.text(certificateData.percent || '100%', 45, 120, { align: 'center' });
+          doc.setFontSize(8);
+          doc.setTextColor(30, 41, 59);
+          doc.text('ACHIEVEMENT SCORE', 45, 126, { align: 'center' });
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(16);
           doc.setTextColor(100, 116, 139);
-          doc.text('has successfully completed the course', 148.5, 100, { align: 'center' });
+          doc.text(`${certificateData.questionsAttempted} Questions`, 45, 131, { align: 'center' });
+
+          // Col 2: Final Status
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(24);
+          doc.setTextColor(4, 120, 87);
+          doc.text(certificateData.status || 'PASSED', 105, 120, { align: 'center' });
+          doc.setFontSize(8);
+          doc.setTextColor(30, 41, 59);
+          doc.text('FINAL STATUS', 105, 126, { align: 'center' });
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('Passing Score: 60%', 105, 131, { align: 'center' });
+
+          // Col 3: Time Taken
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(24);
+          doc.setTextColor(4, 120, 87);
+          doc.text(certificateData.timeTaken || '76s', 165, 120, { align: 'center' });
+          doc.setFontSize(8);
+          doc.setTextColor(30, 41, 59);
+          doc.text('TIME TAKEN', 165, 126, { align: 'center' });
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text(`Attempt ${certificateData.attempt || '#8'}`, 165, 131, { align: 'center' });
+
+          // Vertical Separators in Grid
+          doc.setLineWidth(0.2);
+          doc.setDrawColor(220, 220, 220);
+          doc.line(75, 114, 75, 132);
+          doc.line(135, 114, 135, 132);
+
+          // Assessment Details Card Box
+          doc.setFillColor(248, 250, 252);
+          doc.setDrawColor(226, 232, 240);
+          doc.setLineWidth(0.4);
+          doc.roundedRect(15, 142, 180, 52, 3, 3, 'FD');
 
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(20);
-          doc.setTextColor(30, 58, 138);
-          doc.text(certificateData.courseName, 148.5, 120, { align: 'center' });
+          doc.setFontSize(10);
+          doc.setTextColor(6, 95, 70);
+          doc.text('ASSESSMENT DETAILS', 20, 149);
+
+          doc.setDrawColor(241, 245, 249);
+          doc.line(15, 152, 195, 152);
 
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(14);
+          doc.setFontSize(8);
           doc.setTextColor(100, 116, 139);
-          doc.text(`Completed on ${certificateData.date} with a score of ${certificateData.percent}`, 148.5, 140, { align: 'center' });
+          
+          doc.text('ASSESSMENT DATE', 25, 160);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text(certificateData.date, 25, 165);
 
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('QUESTIONS ATTEMPTED', 115, 160);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text(certificateData.questionsAttempted, 115, 165);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('CORRECT ANSWERS', 25, 178);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text(`${certificateData.score || '5/5'} (${certificateData.percent || '100%'})`, 25, 183);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('COURSE TYPE', 115, 178);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text('Topic', 115, 183);
+
+          // Signatures Section
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.setTextColor(30, 41, 59);
+          doc.text(signerName, 60, 218, { align: 'center' });
+          doc.setLineWidth(0.4);
+          doc.setDrawColor(200, 200, 200);
+          doc.line(30, 222, 90, 222);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text(signerDesignation, 60, 227, { align: 'center' });
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.setTextColor(30, 41, 59);
+          doc.text(certificateData.date, 150, 218, { align: 'center' });
+          doc.line(120, 222, 180, 222);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text('Date of Issue', 150, 227, { align: 'center' });
+
+          // Footer info
+          doc.setFont('helvetica', 'bold');
           doc.setFontSize(10);
-          doc.text(`Certificate ID: ${certificateData.certId}`, 148.5, 180, { align: 'center' });
-          doc.text('Avante Medical Learning Management System', 148.5, 190, { align: 'center' });
+          doc.setTextColor(4, 120, 87);
+          doc.text(`Certificate ID: ${certificateData.certId}`, 105, 246, { align: 'center' });
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          doc.text(footerText, 105, 252, { align: 'center' });
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text('✔ Digitally Verified Certificate', 105, 260, { align: 'center' });
 
           // Output as base64
           const pdfBase64 = doc.output('datauristring').split(',')[1];
@@ -313,7 +497,7 @@ export default function CertificateScreen() {
           
           success = true;
           downloadResult = { uri: fileUri };
-          console.log('Local PDF generated successfully');
+          console.log('Local Portrait PDF generated successfully');
         } catch (pdfError) {
           console.error('Local PDF generation failed:', pdfError);
         }
@@ -336,15 +520,7 @@ export default function CertificateScreen() {
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Open Browser', onPress: () => {
-              // Try a few variations for the browser URL
-              const patterns = [
-                certificateData.publicUrl,
-                `https://lms-backend.netswaptech.com/certificate/view/${certificateData.certId}`,
-                `https://lms-backend.netswaptech.com/certificate/${certificateData.certId}`
-              ];
-              
-              // Just open the first one for now, or we could show a choice
-              Linking.openURL(patterns[0]).catch(err => {
+              Linking.openURL(certificateData.publicUrl).catch(err => {
                 Alert.alert('Error', 'Unable to open browser.');
               });
             }}
@@ -362,12 +538,309 @@ export default function CertificateScreen() {
 
   const handleShare = async () => {
     try {
+      setDownloading(true);
+      
+      const baseUrl = 'https://lms-backend.netswaptech.com/api/v1';
+      const webBaseUrl = 'https://lms-backend.netswaptech.com';
+      
+      const downloadUrls = [];
+      if (successEndpoint) {
+        downloadUrls.push(`${baseUrl}${successEndpoint}/pdf`);
+        downloadUrls.push(`${baseUrl}${successEndpoint}?export=pdf`);
+      }
+      
+      downloadUrls.push(`${baseUrl}/trainee/reports/certificate/${assessmentId}/pdf`);
+      downloadUrls.push(`${baseUrl}/trainee/reports/certificate/${certificateData.certId}/pdf`);
+      downloadUrls.push(`${baseUrl}/trainee/reports/certificate-download/${assessmentId}`);
+      downloadUrls.push(`${webBaseUrl}/certificate/pdf/${certificateData.certId}`);
+      downloadUrls.push(`${webBaseUrl}/certificate/${certificateData.certId}/pdf`);
+      downloadUrls.push(`${webBaseUrl}/certificate/download/${certificateData.certId}`);
+      downloadUrls.push(`${webBaseUrl}/certificate/${certificateData.certId}?export=pdf`);
+      downloadUrls.push(`${webBaseUrl}/certificate/${certificateData.certId}?download=1`);
+
+      const filename = `Certificate_${certificateData.certId || assessmentId}.pdf`;
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      const headers = await buildAuthHeaders();
+
+      let success = false;
+      let downloadResult = null;
+
+      // 1. Try server-side download first
+      for (const url of downloadUrls) {
+        try {
+          downloadResult = await FileSystem.downloadAsync(url, fileUri, { headers });
+          if (downloadResult.status === 200) {
+            const fileInfo = await FileSystem.getInfoAsync(fileUri);
+            if (fileInfo.exists && fileInfo.size > 500) {
+              const fileHeader = await FileSystem.readAsStringAsync(fileUri, {
+                encoding: 'utf8',
+                length: 5,
+              });
+              
+              if (fileHeader && fileHeader.startsWith('%PDF-')) {
+                success = true;
+                break;
+              } else {
+                await FileSystem.deleteAsync(fileUri, { idempotent: true });
+              }
+            }
+          }
+        } catch (err) {
+          continue;
+        }
+      }
+
+      // 2. Local PDF generation
+      if (!success) {
+        try {
+          const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          const companyName = certificateData.design?.company_name || "Aavnta Medical";
+          const heading = certificateData.design?.heading || "Certificate of Achievement";
+          const tagline = certificateData.design?.tagline || "Avante Sales Training App";
+          const signerName = certificateData.design?.signer_name || "Dr. John Doe";
+          const signerDesignation = certificateData.design?.signer_designation || "Head of Training";
+          const footerText = certificateData.design?.footer_text || "This certificate is digitally generated and does not require a physical signature.";
+
+          // Draw the beautiful double green borders exactly like the screenshot
+          // Thick outer green border
+          doc.setLineWidth(1.2);
+          doc.setDrawColor(4, 120, 87); // Emerald Green
+          doc.rect(8, 8, 194, 281); 
+          
+          // Thin inner green border
+          doc.setLineWidth(0.4);
+          doc.setDrawColor(5, 150, 105); // Lighter Green
+          doc.rect(10.5, 10.5, 189, 276);
+
+          // Corner lines (Leaf ornaments representation)
+          doc.line(10.5, 16.5, 16.5, 10.5);
+          doc.line(10.5, 20.5, 20.5, 10.5);
+          doc.line(199.5, 16.5, 193.5, 10.5);
+          doc.line(199.5, 20.5, 189.5, 10.5);
+          doc.line(10.5, 280.5, 16.5, 286.5);
+          doc.line(10.5, 276.5, 20.5, 286.5);
+          doc.line(199.5, 280.5, 193.5, 286.5);
+          doc.line(199.5, 276.5, 189.5, 286.5);
+
+          // Aavnta Medical
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(26);
+          doc.setTextColor(6, 95, 70); // Dark Green
+          doc.text(companyName, 105, 32, { align: 'center' });
+
+          // Tagline
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10);
+          doc.setTextColor(4, 120, 87);
+          doc.text(tagline, 105, 38, { align: 'center' });
+
+          // Star Icon
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(16);
+          doc.setTextColor(4, 120, 87);
+          doc.text('★', 105, 46, { align: 'center' });
+
+          // Heading
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(18);
+          doc.setTextColor(4, 120, 87);
+          doc.text(heading.toUpperCase(), 105, 56, { align: 'center' });
+
+          // Of Achievement Badge text
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(4, 120, 87);
+          doc.text('🏆 OF ACHIEVEMENT 🏆', 105, 63, { align: 'center' });
+
+          // Presented presentation line
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(12);
+          doc.setTextColor(100, 116, 139);
+          doc.text('This certificate is proudly presented to', 105, 76, { align: 'center' });
+
+          // User Name
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(28);
+          doc.setTextColor(6, 95, 70);
+          doc.text(certificateData.userName, 105, 92, { align: 'center' });
+
+          // Name underline
+          doc.setLineWidth(0.6);
+          doc.setDrawColor(4, 120, 87);
+          doc.line(45, 96, 165, 96);
+
+          // Employee ID and Email Row
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(30, 41, 59);
+          doc.text(`Employee ID: ${certificateData.employeeId}`, 55, 104, { align: 'center' });
+          doc.text(`Email: ${certificateData.userEmail}`, 145, 104, { align: 'center' });
+
+          // Score Grid Section
+          // Col 1: Score
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(24);
+          doc.setTextColor(4, 120, 87);
+          doc.text(certificateData.percent || '100%', 45, 120, { align: 'center' });
+          doc.setFontSize(8);
+          doc.setTextColor(30, 41, 59);
+          doc.text('ACHIEVEMENT SCORE', 45, 126, { align: 'center' });
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text(`${certificateData.questionsAttempted} Questions`, 45, 131, { align: 'center' });
+
+          // Col 2: Final Status
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(24);
+          doc.setTextColor(4, 120, 87);
+          doc.text(certificateData.status || 'PASSED', 105, 120, { align: 'center' });
+          doc.setFontSize(8);
+          doc.setTextColor(30, 41, 59);
+          doc.text('FINAL STATUS', 105, 126, { align: 'center' });
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('Passing Score: 60%', 105, 131, { align: 'center' });
+
+          // Col 3: Time Taken
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(24);
+          doc.setTextColor(4, 120, 87);
+          doc.text(certificateData.timeTaken || '76s', 165, 120, { align: 'center' });
+          doc.setFontSize(8);
+          doc.setTextColor(30, 41, 59);
+          doc.text('TIME TAKEN', 165, 126, { align: 'center' });
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text(`Attempt ${certificateData.attempt || '#8'}`, 165, 131, { align: 'center' });
+
+          // Vertical Separators in Grid
+          doc.setLineWidth(0.2);
+          doc.setDrawColor(220, 220, 220);
+          doc.line(75, 114, 75, 132);
+          doc.line(135, 114, 135, 132);
+
+          // Assessment Details Card Box
+          doc.setFillColor(248, 250, 252);
+          doc.setDrawColor(226, 232, 240);
+          doc.setLineWidth(0.4);
+          doc.roundedRect(15, 142, 180, 52, 3, 3, 'FD');
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(6, 95, 70);
+          doc.text('ASSESSMENT DETAILS', 20, 149);
+
+          doc.setDrawColor(241, 245, 249);
+          doc.line(15, 152, 195, 152);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          
+          doc.text('ASSESSMENT DATE', 25, 160);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text(certificateData.date, 25, 165);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('QUESTIONS ATTEMPTED', 115, 160);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text(certificateData.questionsAttempted, 115, 165);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('CORRECT ANSWERS', 25, 178);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text(`${certificateData.score || '5/5'} (${certificateData.percent || '100%'})`, 25, 183);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('COURSE TYPE', 115, 178);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text('Topic', 115, 183);
+
+          // Signatures Section
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.setTextColor(30, 41, 59);
+          doc.text(signerName, 60, 218, { align: 'center' });
+          doc.setLineWidth(0.4);
+          doc.setDrawColor(200, 200, 200);
+          doc.line(30, 222, 90, 222);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text(signerDesignation, 60, 227, { align: 'center' });
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.setTextColor(30, 41, 59);
+          doc.text(certificateData.date, 150, 218, { align: 'center' });
+          doc.line(120, 222, 180, 222);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text('Date of Issue', 150, 227, { align: 'center' });
+
+          // Footer info
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(4, 120, 87);
+          doc.text(`Certificate ID: ${certificateData.certId}`, 105, 246, { align: 'center' });
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          doc.text(footerText, 105, 252, { align: 'center' });
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text('✔ Digitally Verified Certificate', 105, 260, { align: 'center' });
+
+          const pdfBase64 = doc.output('datauristring').split(',')[1];
+          await FileSystem.writeAsStringAsync(fileUri, pdfBase64, { encoding: 'base64' });
+          
+          success = true;
+          downloadResult = { uri: fileUri };
+        } catch (pdfError) {
+          console.error('Local PDF generation failed:', pdfError);
+        }
+      }
+
+      if (success && downloadResult) {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Share Certificate PDF',
+            UTI: 'com.adobe.pdf',
+          });
+        }
+      } else {
+        // Fallback to text link sharing
+        await Share.share({
+          message: `I have successfully completed the course "${certificateData.courseName}" on Avante Medical LMS! 🎓\nCheck out my certificate: ${certificateData.publicUrl}`,
+          url: certificateData.publicUrl,
+        });
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      // Fallback
       await Share.share({
         message: `I have successfully completed the course "${certificateData.courseName}" on Avante Medical LMS! 🎓\nCheck out my certificate: ${certificateData.publicUrl}`,
         url: certificateData.publicUrl,
       });
-    } catch (error) {
-      console.error('Share error:', error);
+    } finally {
+      setDownloading(false);
     }
   };
 

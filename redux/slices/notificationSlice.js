@@ -40,6 +40,11 @@ const notificationSlice = createSlice({
     list: [],
     unreadCount: 0,
     loading: false,
+    analytics: {
+      total: 0,
+      unread: 0,
+      read: 0,
+    },
     pagination: {
       currentPage: 1,
       lastPage: 1,
@@ -51,6 +56,7 @@ const notificationSlice = createSlice({
     clearNotifications: (state) => {
       state.list = [];
       state.unreadCount = 0;
+      state.analytics = { total: 0, unread: 0, read: 0 };
     },
     markReadLocal: (state, action) => {
       const id = action.payload;
@@ -61,6 +67,8 @@ const notificationSlice = createSlice({
         if (wasUnread) {
           state.list[index].is_read = 1;
           state.unreadCount = Math.max(0, state.unreadCount - 1);
+          state.analytics.unread = Math.max(0, state.analytics.unread - 1);
+          state.analytics.read += 1;
         }
       }
     },
@@ -77,6 +85,21 @@ const notificationSlice = createSlice({
         // Update unreadCount if provided in the main response
         if (action.payload?.unread_count !== undefined) {
           state.unreadCount = action.payload.unread_count;
+        } else if (action.payload?.analytics?.unread !== undefined) {
+          state.unreadCount = action.payload.analytics.unread;
+        }
+        
+        // Parse analytics
+        if (action.payload?.analytics) {
+          state.analytics = action.payload.analytics;
+        } else {
+          const total = action.payload?.total || data.length;
+          const unread = data.filter(n => !(n.is_read === true || n.is_read == 1 || n.is_read === '1')).length;
+          state.analytics = {
+            total,
+            unread,
+            read: Math.max(0, total - unread),
+          };
         }
 
         if (action.meta.arg === 1) {
@@ -118,6 +141,10 @@ const notificationSlice = createSlice({
 
           if (wasUnread) {
             state.unreadCount = Math.max(0, state.unreadCount - 1);
+            if (state.analytics) {
+              state.analytics.unread = Math.max(0, state.analytics.unread - 1);
+              state.analytics.read = (state.analytics.read || 0) + 1;
+            }
           }
         }
       });

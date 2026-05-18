@@ -23,6 +23,14 @@ export default function CreatePasswordScreen() {
   const { token: tokenFromParams = '' } = useLocalSearchParams();
   const dispatch = useDispatch();
   const { actionLoading, errorMessage } = useSelector((state) => state.auth);
+
+  React.useEffect(() => {
+    dispatch(clearAuthMessages());
+    return () => {
+      dispatch(clearAuthMessages());
+    };
+  }, [dispatch]);
+
   const [token, setToken] = useState(String(tokenFromParams || ''));
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

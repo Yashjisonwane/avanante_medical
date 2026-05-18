@@ -173,10 +173,13 @@ export default function ChapterDetailsScreen() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
 
-  const { currentChapter, currentTopics, loading } = useSelector((state) => state.course);
+  const { currentChapter, currentTopics, currentLevel, currentModule, loading } = useSelector((state) => state.course);
   const [totalDuration, setTotalDuration] = useState(0);
+  const [isAboutExpanded, setIsAboutExpanded] = useState(false);
 
   const topics = currentTopics || [];
+  const levelTitle = currentLevel?.title || 'Level';
+  const moduleTitle = currentModule?.title || 'Module';
   const chapterTitle = currentChapter?.title || `Chapter ${id}`;
   const chapterDesc = currentChapter?.description || 'Chapter description';
   const assessmentId = currentChapter?.assessment_id || currentChapter?.quiz_id || null;
@@ -251,21 +254,19 @@ export default function ChapterDetailsScreen() {
               style={styles.banner}
               imageStyle={styles.bannerImage}
             >
-              <View style={styles.bannerOverlay}>
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
+                style={styles.bannerOverlay}
+              >
                 <View style={styles.badgesRow}>
                   <View style={styles.badgePrimary}>
-                    <Text style={styles.badgePrimaryText}>{t('levels.chapter', 'Chapter')} {id} • {totalTopicsCount} {t('levels.topics', 'Topics')} • {totalDuration} {t('common.min', 'min')}</Text>
-                  </View>
-                  <View style={styles.badgeSecondary}>
-                    <Ionicons name="time-outline" size={ms(12)} color="#fff" />
-                    <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
+                    <Text style={styles.badgePrimaryText}>{levelTitle} • {moduleTitle} • {chapterTitle} • {totalTopicsCount} {t('levels.topics', 'Topics')} • {totalDuration} {t('common.min', 'min')}</Text>
                   </View>
                 </View>
                 <Text style={styles.bannerTitle}>
-                  {chapterTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                  {chapterTitle}
                 </Text>
-                <Text style={styles.bannerDesc}>{chapterDesc}</Text>
-              </View>
+              </LinearGradient>
             </ImageBackground>
           ) : (
             <LinearGradient 
@@ -277,17 +278,12 @@ export default function ChapterDetailsScreen() {
               <View style={[styles.bannerOverlay, { backgroundColor: 'transparent' }]}>
                 <View style={styles.badgesRow}>
                   <View style={styles.badgePrimary}>
-                    <Text style={styles.badgePrimaryText}>{t('levels.chapter', 'Chapter')} {id} • {totalTopicsCount} {t('levels.topics', 'Topics')} • {totalDuration} {t('common.min', 'min')}</Text>
-                  </View>
-                  <View style={styles.badgeSecondary}>
-                    <Ionicons name="time-outline" size={ms(12)} color="#fff" />
-                    <Text style={styles.badgeSecondaryText}>{t('levels.self_paced', 'Self-paced')}</Text>
+                    <Text style={styles.badgePrimaryText}>{levelTitle} • {moduleTitle} • {chapterTitle} • {totalTopicsCount} {t('levels.topics', 'Topics')} • {totalDuration} {t('common.min', 'min')}</Text>
                   </View>
                 </View>
                 <Text style={styles.bannerTitle}>
-                  {chapterTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                  {chapterTitle}
                 </Text>
-                <Text style={styles.bannerDesc}>{chapterDesc}</Text>
               </View>
             </LinearGradient>
           )}
@@ -339,7 +335,16 @@ export default function ChapterDetailsScreen() {
           </View>
           <View style={styles.aboutContent}>
             <Text style={styles.aboutTitle}>{t('levels.about_chapter', 'About this Chapter')}</Text>
-            <HtmlContent html={chapterDesc} baseStyle={{ fontSize: fs(12) }} />
+            <View style={!isAboutExpanded && { height: hp(60), overflow: 'hidden' }}>
+              <HtmlContent html={chapterDesc} baseStyle={{ fontSize: fs(12) }} />
+            </View>
+            {chapterDesc?.length > 100 && (
+              <TouchableOpacity onPress={() => setIsAboutExpanded(!isAboutExpanded)} style={{ marginTop: hp(5) }}>
+                <Text style={styles.seeMoreText}>
+                  {isAboutExpanded ? t('common.see_less', 'See Less') : t('common.see_more', 'See More')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -386,10 +391,6 @@ export default function ChapterDetailsScreen() {
       {/* Sticky Bottom Footer */}
       {completedTopicsCount === totalTopicsCount && totalTopicsCount > 0 ? (
         <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
-          <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>{t('levels.congratulations', 'Congratulations!')}</Text>
-            <Text style={styles.footerSubtitle}>{t('levels.chapter_completed', 'Chapter Completed')}</Text>
-          </View>
           {assessmentId && !(currentChapter?.is_completed || currentChapter?.is_passed) ? (
             <TouchableOpacity
               style={[styles.continueBtn, { backgroundColor: '#D946EF' }]}
@@ -415,12 +416,6 @@ export default function ChapterDetailsScreen() {
         </View>
       ) : nextTopicToPlay && (
         <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
-          <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
-            <Text style={styles.footerSubtitle}>
-              {t('common.next', 'Next')}: {nextTopicToPlay.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
-            </Text>
-          </View>
           <TouchableOpacity
             style={styles.continueBtn}
             onPress={() => {
@@ -499,20 +494,24 @@ const styles = StyleSheet.create({
   },
   bannerOverlay: {
     padding: ms(20),
-    backgroundColor: 'rgba(0,0,0,0.4)',
     paddingTop: hp(40),
+    paddingBottom: hp(25),
+    justifyContent: 'flex-end',
+    flex: 1,
   },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: hp(10),
+    marginBottom: hp(12),
+    flexWrap: 'wrap',
+    gap: hp(8),
   },
   badgePrimary: {
     backgroundColor: '#3B82F6',
     paddingHorizontal: wp(10),
     paddingVertical: hp(4),
     borderRadius: ms(12),
-    marginRight: wp(10),
+    maxWidth: '100%',
   },
   badgePrimaryText: {
     color: '#fff',
@@ -663,6 +662,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: hp(4),
+  },
+  seeMoreText: {
+    fontSize: fs(12),
+    color: '#2563EB',
+    fontWeight: '700',
   },
   aboutText: {
     fontSize: fs(12),
@@ -891,9 +895,6 @@ const styles = StyleSheet.create({
     paddingVertical: hp(15),
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
@@ -917,10 +918,12 @@ const styles = StyleSheet.create({
   continueBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    backgroundColor: AppColors.primary,
     paddingHorizontal: wp(20),
-    paddingVertical: hp(12),
-    borderRadius: ms(8),
+    paddingVertical: hp(14),
+    borderRadius: ms(12),
+    width: '100%',
   },
   continueBtnText: {
     color: '#fff',

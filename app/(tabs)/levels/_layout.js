@@ -11,6 +11,7 @@ export default function LevelsLayout() {
       <Stack.Screen name="subtopic-list" />
       <Stack.Screen name="exam" />
       <Stack.Screen name="quiz-result" />
+      <Stack.Screen name="support-chat" />
     </Stack>
   );
 }

@@ -133,7 +133,7 @@ export default function SubtopicListScreen() {
         </View>
 
         <TopicCard
-          image={require('../../../assets/subtitle-1.png')}
+          image={require('../../../assets/topic-details-2.png')}
           title={t('chapters.t1_title')}
           units={6}
           progress={100}
@@ -142,7 +142,7 @@ export default function SubtopicListScreen() {
         />
 
         <TopicCard
-          image={require('../../../assets/subtitle-2.png')}
+          image={require('../../../assets/topic-detaisl-1.jpg')}
           title={t('chapters.t2_title')}
           units={4}
           progress={50}
@@ -161,7 +161,7 @@ export default function SubtopicListScreen() {
         />
 
         <TopicCard
-          image={require('../../../assets/level-detail-1.png')}
+          image={require('../../../assets/my-level-3.png')}
           title={t('chapters.p_ecg_trace')}
           units={8}
           progress={0}

@@ -40,6 +40,13 @@ export default function LoginScreen() {
   const dispatch = useDispatch();
   const { actionLoading, errorMessage, language } = useSelector((state) => state.auth);
 
+  React.useEffect(() => {
+    dispatch(clearAuthMessages());
+    return () => {
+      dispatch(clearAuthMessages());
+    };
+  }, [dispatch]);
+
   const currentLanguage = LANGUAGES.find(l => l.code === language) || LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
   const changeLanguage = async (code) => {

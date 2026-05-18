@@ -4,6 +4,7 @@
     "slug": "avanate-medical",
     "scheme": "avante",
     "version": "1.0.0",
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -31,6 +32,7 @@
       "permissions": [
         "POST_NOTIFICATIONS"
       ],
+      "jsEngine": "hermes",
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {

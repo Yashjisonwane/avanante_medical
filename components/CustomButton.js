@@ -1,5 +1,5 @@
-import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { AppColors } from '../constants/Theme';
 
 const CustomButton = ({ 
   title, 
@@ -44,12 +44,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   primary: {
-    backgroundColor: '#17B8A6', // Teal
+    backgroundColor: AppColors.primary,
   },
   secondary: {
     backgroundColor: '#fff',
     borderWidth: 1.5,
-    borderColor: '#A8C9F8', // Soft blue border from screenshots
+    borderColor: AppColors.border,
   },
   text: {
     fontSize: 16,

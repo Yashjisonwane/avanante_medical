@@ -137,13 +137,12 @@ const ChapterItem = ({ chapterData, isCurrent, index }) => {
         {isUnlocked ? (
           <TouchableOpacity 
             style={[
-              styles.actionButtonStart,
-              isCompleted && { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' }
+              styles.actionButtonStart
             ]} 
             onPress={handlePress}
           >
-            <Text style={[styles.actionButtonStartText, isCompleted && { color: '#2563EB' }]}>
-              {isCompleted ? t('common.review', 'Review') : t('common.continue', 'Continue')}
+            <Text style={[styles.actionButtonStartText]}>
+              {isCompleted ? t('common.view', 'View') : t('common.continue', 'Continue')}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -166,6 +165,7 @@ export default function ModuleDetailsScreen() {
   const { currentModule, currentChapters, loading } = useSelector((state) => state.course);
   const [totalDuration, setTotalDuration] = useState(0);
   const [totalTopicsCount, setTotalTopicsCount] = useState(0);
+  const [isAboutExpanded, setIsAboutExpanded] = useState(false);
   
   const chapters = currentChapters || [];
   const moduleTitle = currentModule?.title || `Module ${id}`;
@@ -199,13 +199,40 @@ export default function ModuleDetailsScreen() {
     }
   }, [currentModule]);
 
-  // Frontend calculation for live progress
+  // Generic robust percentage solver
+  const getCompletionPercent = (item, defaultVal = 0) => {
+    if (!item) return defaultVal;
+    const isCompleted = item.is_completed == true || item.is_completed == 1 || item.is_completed == 'true' || item.status === 'completed';
+    
+    let rawVal = item.completion_percentage ?? 
+                 item.completion_percent ?? 
+                 item.completion ??
+                 item.progress_percentage ?? 
+                 item.progress_percent ?? 
+                 item.progress ?? 
+                 null;
+                 
+    if (rawVal === 'NaN' || rawVal === 'null' || rawVal === 'undefined' || rawVal === '') {
+      rawVal = null;
+    }
+    
+    const num = Number(rawVal);
+    if (!isNaN(num) && rawVal !== null) {
+      return num;
+    }
+    return isCompleted ? 100 : defaultVal;
+  };
+
+  // Live progress directly from backend API
+  const progressPercent = getCompletionPercent(currentModule);
+  
   const completedChaptersCount = chapters.filter(c => 
     c.is_completed == true || c.is_completed == 1 || c.is_completed == 'true'
   ).length;
-
   const totalChaptersCount = chapters.length;
-  const progressPercent = totalChaptersCount > 0 ? Math.round((completedChaptersCount / totalChaptersCount) * 100) : 0;
+
+  const completedTopicsCount = currentModule?.completed_topics || 0;
+  const totalTopics = currentModule?.total_topics || totalTopicsCount || 0;
   
   // Find first unlocked chapter that is not completed
   const currentChapterIndex = chapters.findIndex(c => {
@@ -250,10 +277,13 @@ export default function ModuleDetailsScreen() {
               style={styles.banner}
               imageStyle={styles.bannerImage}
             >
-              <View style={styles.bannerOverlay}>
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
+                style={styles.bannerOverlay}
+              >
                 <View style={styles.badgesRow}>
                   <View style={styles.badgePrimary}>
-                    <Text style={styles.badgePrimaryText}>{t('modules.module_number', { number: id })} • {totalChaptersCount} {t('levels.chapters', 'Chapters')} • {totalTopicsCount} {t('levels.topics', 'Topics')}</Text>
+                    <Text style={styles.badgePrimaryText}>{moduleTitle} • {totalChaptersCount} {t('levels.chapters', 'Chapters')} • {totalTopicsCount} {t('levels.topics', 'Topics')}</Text>
                   </View>
                   <View style={styles.badgeSecondary}>
                     <Ionicons name="time-outline" size={ms(12)} color="#fff" />
@@ -261,10 +291,9 @@ export default function ModuleDetailsScreen() {
                   </View>
                 </View>
                 <Text style={styles.bannerTitle}>
-                  {moduleTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                  {moduleTitle}
                 </Text>
-                <Text style={styles.bannerDesc}>{moduleDesc}</Text>
-              </View>
+              </LinearGradient>
             </ImageBackground>
           ) : (
             <LinearGradient 
@@ -276,7 +305,7 @@ export default function ModuleDetailsScreen() {
               <View style={[styles.bannerOverlay, { backgroundColor: 'transparent' }]}>
                 <View style={styles.badgesRow}>
                   <View style={styles.badgePrimary}>
-                    <Text style={styles.badgePrimaryText}>{t('modules.module_number', { number: id })} • {totalChaptersCount} {t('levels.chapters', 'Chapters')} • {totalTopicsCount} {t('levels.topics', 'Topics')}</Text>
+                    <Text style={styles.badgePrimaryText}>{moduleTitle} • {totalChaptersCount} {t('levels.chapters', 'Chapters')} • {totalTopicsCount} {t('levels.topics', 'Topics')}</Text>
                   </View>
                   <View style={styles.badgeSecondary}>
                     <Ionicons name="time-outline" size={ms(12)} color="#fff" />
@@ -284,9 +313,8 @@ export default function ModuleDetailsScreen() {
                   </View>
                 </View>
                 <Text style={styles.bannerTitle}>
-                  {moduleTitle?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
+                  {moduleTitle}
                 </Text>
-                <Text style={styles.bannerDesc}>{moduleDesc}</Text>
               </View>
             </LinearGradient>
           )}
@@ -308,7 +336,7 @@ export default function ModuleDetailsScreen() {
               <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: '#2563EB' }]} />
               </View>
-              <Text style={styles.progressSubtext}>{t('modules.chapter_complete', { completed: completedChaptersCount, total: totalChaptersCount })}</Text>
+              <Text style={styles.progressSubtext}>{completedTopicsCount}/{totalTopics} {t('levels.topics_complete', 'Topics Complete')}</Text>
             </View>
           </View>
           
@@ -316,7 +344,7 @@ export default function ModuleDetailsScreen() {
             <View style={[styles.statCardHalf, { borderLeftColor: '#9333EA' }]}>
               <Text style={[styles.statCardTitle, { color: '#9333EA' }]}>{t('common.completed', 'COMPLETED')}</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statCardValueSmall}>{completedChaptersCount}/{totalChaptersCount}</Text>
+                <Text style={styles.statCardValueSmall}>{completedTopicsCount}/{totalTopics}</Text>
                 <Ionicons name="ribbon-outline" size={ms(18)} color="#9333EA" />
               </View>
             </View>
@@ -338,7 +366,16 @@ export default function ModuleDetailsScreen() {
           </View>
           <View style={styles.aboutContent}>
             <Text style={styles.aboutTitle}>{t('modules.about_module', 'About this Module')}</Text>
-            <HtmlContent html={moduleDesc} baseStyle={{ fontSize: fs(12) }} />
+            <View style={!isAboutExpanded && { height: hp(60), overflow: 'hidden' }}>
+              <HtmlContent html={moduleDesc} baseStyle={{ fontSize: fs(12) }} />
+            </View>
+            {moduleDesc?.length > 100 && (
+              <TouchableOpacity onPress={() => setIsAboutExpanded(!isAboutExpanded)} style={{ marginTop: hp(5) }}>
+                <Text style={styles.seeMoreText}>
+                  {isAboutExpanded ? t('common.see_less', 'See Less') : t('common.see_more', 'See More')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -382,13 +419,9 @@ export default function ModuleDetailsScreen() {
       {/* Sticky Bottom Footer */}
       {completedChaptersCount === totalChaptersCount && totalChaptersCount > 0 ? (
         <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
-          <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>{t('levels.congratulations', 'Congratulations!')}</Text>
-            <Text style={styles.footerSubtitle}>{t('modules.module_completed', 'Module Completed')}</Text>
-          </View>
           {assessmentId && !(currentModule?.is_completed || currentModule?.is_passed) ? (
             <TouchableOpacity 
-              style={[styles.continueBtn, { backgroundColor: '#D946EF' }]}
+              style={[styles.continueBtn]}
               onPress={() => {
                 router.push({
                   pathname: '/(tabs)/levels/exam',
@@ -411,12 +444,6 @@ export default function ModuleDetailsScreen() {
         </View>
       ) : nextChapterToPlay && (
         <View style={[styles.stickyFooter, { paddingBottom: hp(15) }]}>
-          <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>{t('levels.continue_journey', 'Continue your learning journey')}</Text>
-            <Text style={styles.footerSubtitle}>
-              {t('common.next', 'Next')}: {nextChapterToPlay.title?.replace(/^(?:(?:Module|Chapter|Topic)\s*)?[\d\.]+\s*[-:]?\s*/i, '')}
-            </Text>
-          </View>
           <TouchableOpacity 
             style={styles.continueBtn}
             onPress={() => {
@@ -495,20 +522,24 @@ const styles = StyleSheet.create({
   },
   bannerOverlay: {
     padding: ms(20),
-    backgroundColor: 'rgba(0,0,0,0.4)',
     paddingTop: hp(40),
+    paddingBottom: hp(25),
+    justifyContent: 'flex-end',
+    flex: 1,
   },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: hp(10),
+    marginBottom: hp(12),
+    flexWrap: 'wrap',
+    gap: hp(8),
   },
   badgePrimary: {
     backgroundColor: '#3B82F6',
     paddingHorizontal: wp(10),
     paddingVertical: hp(4),
     borderRadius: ms(12),
-    marginRight: wp(10),
+    maxWidth: '100%',
   },
   badgePrimaryText: {
     color: '#fff',
@@ -798,7 +829,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   actionButtonStart: {
-    backgroundColor: '#10B981',
+    backgroundColor: AppColors.primary,
     paddingHorizontal: wp(10),
     paddingVertical: hp(8),
     borderRadius: ms(8),
@@ -868,14 +899,11 @@ const styles = StyleSheet.create({
     paddingVertical: hp(15),
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    elevation: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 20,
   },
   footerTextContainer: {
     flex: 1,
@@ -898,9 +926,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: wp(20),
-    paddingVertical: hp(12),
+    paddingVertical: hp(14),
     borderRadius: ms(12),
+    width: '100%',
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

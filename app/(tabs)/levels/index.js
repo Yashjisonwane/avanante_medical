@@ -17,8 +17,33 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
 import { AppColors, Spacing } from '../../../constants/Theme';
-import { fetchLevelProgress, getHierarchyThunk } from '../../../redux/slices/courseSlice';
+import { fetchLevelProgress, getHierarchyThunk, fetchDashboard } from '../../../redux/slices/courseSlice';
+import { fetchProfile } from '../../../redux/slices/authSlice';
 import { formatImageUrl } from '../../../utils/imageUtils';
+
+// Generic robust percentage solver
+const getCompletionPercent = (item, defaultVal = 0) => {
+  if (!item) return defaultVal;
+  const isCompleted = item.is_completed == true || item.is_completed == 1 || item.is_completed == 'true' || item.status === 'completed';
+  
+  let rawVal = item.completion_percentage ?? 
+               item.completion_percent ?? 
+               item.completion ??
+               item.progress_percentage ?? 
+               item.progress_percent ?? 
+               item.progress ?? 
+               null;
+               
+  if (rawVal === 'NaN' || rawVal === 'null' || rawVal === 'undefined' || rawVal === '') {
+    rawVal = null;
+  }
+  
+  const num = Number(rawVal);
+  if (isNaN(num) || rawVal === null) {
+    return isCompleted ? 100 : defaultVal;
+  }
+  return Math.min(100, Math.max(0, num));
+};
 
 const LevelCard = ({ 
   image, title, stats, progress, status, buttonText, 
@@ -26,6 +51,8 @@ const LevelCard = ({
   onPress, onFaqPress, rawLevel
 }) => {
   const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const description = rawLevel?.description || "";
 
   return (
     <View style={[styles.card, locked && styles.cardLocked]}>
@@ -63,6 +90,25 @@ const LevelCard = ({
       </TouchableOpacity>
       <View style={styles.cardContent}>
         <Text style={[styles.levelTitle, locked && { color: AppColors.textSecondary }]} numberOfLines={2}>{title}</Text>
+        
+        {description ? (
+          <View style={styles.descriptionContainer}>
+            <Text 
+              style={[styles.levelDescription, locked && { color: AppColors.textSecondary }]} 
+              numberOfLines={isExpanded ? undefined : 2}
+            >
+              {description.replace(/<[^>]*>/g, '')}
+            </Text>
+            {description.length > 80 && (
+              <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)}>
+                <Text style={styles.seeMoreText}>
+                  {isExpanded ? t('common.see_less', 'See Less') : t('common.see_more', 'See More')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : null}
+
         <View style={styles.statsContainer}>
           <Ionicons name="book-outline" size={ms(14)} color={AppColors.textSecondary} />
           <Text style={styles.levelStats}>{stats}</Text>
@@ -103,7 +149,7 @@ const LevelCard = ({
         <TouchableOpacity 
           style={[styles.actionButton, 
             buttonVariant === 'primary' && { backgroundColor: AppColors.primaryDark },
-            buttonVariant === 'secondary' && { backgroundColor: AppColors.teal },
+            buttonVariant === 'secondary' && { backgroundColor: AppColors.primaryDark },
             buttonVariant === 'locked' && { backgroundColor: AppColors.backgroundLight },
             locked && { backgroundColor: AppColors.backgroundLight, borderWidth: 0 }
           ]}
@@ -129,15 +175,24 @@ export default function LevelsScreen() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   
-  const { levels, loading, error } = useSelector((state) => state.course);
-  const { isAuthenticated, isHydrated } = useSelector((state) => state.auth);
+  const { levels, loading, error, dashboard } = useSelector((state) => state.course);
+  const { user, language: currentLang, isAuthenticated, isHydrated } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('All');
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('common.good_morning', 'Good morning');
+    if (hour < 17) return t('common.good_afternoon', 'Good afternoon');
+    return t('common.good_evening', 'Good evening');
+  };
 
   useEffect(() => {
     if (isHydrated && isAuthenticated) {
       dispatch(getHierarchyThunk());
+      dispatch(fetchProfile());
+      dispatch(fetchDashboard());
     }
-  }, [dispatch, isHydrated, isAuthenticated]);
+  }, [dispatch, isHydrated, isAuthenticated, currentLang]);
 
   useEffect(() => {
     let backHandlerSubscription = null;
@@ -150,6 +205,7 @@ export default function LevelsScreen() {
       backHandlerSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       if (isAuthenticated) {
         dispatch(getHierarchyThunk());
+        dispatch(fetchDashboard());
       }
     });
 
@@ -193,12 +249,19 @@ export default function LevelsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + hp(5) }]}>
+      <View style={[styles.header, { paddingTop: insets.top + hp(10) }]}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerIcon}>
-            <Ionicons name="arrow-back" size={ms(24)} color={AppColors.textWhite} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('levels.all_levels')}</Text>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerIcon}>
+              <Ionicons name="arrow-back" size={ms(24)} color={AppColors.textWhite} />
+            </TouchableOpacity>
+            <View style={styles.greetingContainer}>
+               <Text style={styles.greetingText}>
+                 {getGreeting()}, {user?.first_name ? `${user.first_name}` : (user?.name || 'User')}
+               </Text>
+               <Text style={styles.headerSubtitle}>{t('levels.all_levels')}</Text>
+            </View>
+          </View>
           <TouchableOpacity style={styles.headerIcon}>
             <Ionicons name="search" size={ms(24)} color={AppColors.textWhite} />
           </TouchableOpacity>
@@ -239,13 +302,14 @@ export default function LevelsScreen() {
              
              // Calculate progress and modules count
              const modulesCount = level.modules ? level.modules.length : (level.modules_count || 0);
-             let progressPercentage = level.progress_percentage || 0;
-             if (!level.progress_percentage && level.modules && modulesCount > 0) {
-               const completedModules = level.modules.filter(m => m.is_completed == true || m.is_completed == 1 || m.is_completed == 'true').length;
-               progressPercentage = Math.round((completedModules / modulesCount) * 100);
-             } else if (isCompleted) {
-               progressPercentage = 100;
-             }
+             
+             // Extract matching level from dashboard levels array (which contains accurate progress)
+             const dashboardLevels = dashboard?.levels || [];
+             const matchingDashboardLevel = dashboardLevels.find(dl => dl.id === level.id);
+             
+             const progressPercentage = matchingDashboardLevel 
+               ? getCompletionPercent(matchingDashboardLevel) 
+               : getCompletionPercent(level);
 
              const currentStatus = isCompleted ? 'Completed' : (isUnlocked ? 'Running' : 'Locked');
              
@@ -284,8 +348,12 @@ export default function LevelsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppColors.backgroundLight },
-  header: { backgroundColor: AppColors.primaryDark, paddingBottom: hp(15) },
+  header: { backgroundColor: AppColors.primaryDark, paddingBottom: hp(20) },
   headerContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.SCREEN_PADDING, justifyContent: 'space-between' },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  greetingContainer: { marginLeft: wp(12) },
+  greetingText: { fontSize: fs(18), fontWeight: '700', color: AppColors.textWhite },
+  headerSubtitle: { fontSize: fs(12), color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
   headerIcon: { width: wp(40), height: wp(40), borderRadius: wp(20), backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: fs(20), fontWeight: '700', color: AppColors.textWhite },
   tabContainer: { flexDirection: 'row', backgroundColor: AppColors.backgroundWhite, paddingHorizontal: Spacing.SCREEN_PADDING, paddingVertical: hp(15), gap: wp(15) },
@@ -304,7 +372,10 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', top: hp(15), right: wp(15), paddingHorizontal: wp(15), paddingVertical: hp(6), borderRadius: ms(8) },
   badgeText: { fontSize: fs(12), fontWeight: '800', color: AppColors.textDark },
   cardContent: { padding: wp(20) },
-  levelTitle: { fontSize: fs(20), fontWeight: '800', color: AppColors.textDark, marginBottom: hp(4), lineHeight: fs(28) },
+  levelTitle: { fontSize: fs(20), fontWeight: '800', color: AppColors.textDark, marginBottom: hp(8), lineHeight: fs(28) },
+  descriptionContainer: { marginBottom: hp(12) },
+  levelDescription: { fontSize: fs(13), color: AppColors.textSecondary, lineHeight: fs(18), marginBottom: hp(4) },
+  seeMoreText: { fontSize: fs(12), fontWeight: '700', color: AppColors.primary, marginBottom: hp(4) },
   statsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: hp(15) },
   levelStats: { fontSize: fs(14), color: AppColors.textSecondary, marginLeft: wp(6) },
   progressContainer: { marginBottom: hp(20) },

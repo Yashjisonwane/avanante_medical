@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs } from '../../../utils/responsive';
@@ -60,18 +60,24 @@ export default function ExamScreen() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   
   // Security: Prevent Screenshots and Screen Recording
-  ScreenCapture.usePreventScreenCapture();
-
-  useEffect(() => {
-    const subscription = ScreenCapture.addScreenshotListener(() => {
-      Alert.alert(
-        t('exam.security_warning', 'Security Warning'),
-        t('exam.screenshot_msg', 'Screenshots are forbidden during exams. Your attempt has been noted.'),
-        [{ text: "OK", style: "cancel" }]
-      );
-    });
-    return () => subscription.remove();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      ScreenCapture.preventScreenCaptureAsync();
+      
+      const subscription = ScreenCapture.addScreenshotListener(() => {
+        Alert.alert(
+          t('exam.security_warning', 'Security Warning'),
+          t('exam.screenshot_msg', 'Screenshots are forbidden during exams. Your attempt has been noted.'),
+          [{ text: "OK", style: "cancel" }]
+        );
+      });
+      
+      return () => {
+        subscription.remove();
+        ScreenCapture.allowScreenCaptureAsync();
+      };
+    }, [])
+  );
 
   const [selectedOptionId, setSelectedOptionId] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -475,10 +481,10 @@ export default function ExamScreen() {
               </View>
             )}
             <Text style={styles.attemptsLabel}>
-              {t('exam.attempts', 'Attempts')}: <Text style={styles.attemptsValue}>{assessment.details?.attempts_count || 0} / {assessment.details?.attempts_limit || 0}</Text>
+              {t('exam.attempts', 'Attempts')}: <Text style={styles.attemptsValue}>{assessment.details?.attempts_count || 1} / {assessment.details?.attempts_limit || 1}</Text>
             </Text>
             <Text style={styles.remainingLabel}>
-              {t('exam.remaining', 'Remaining')}: <Text style={styles.remainingValue}>{(assessment.details?.attempts_limit || 0) - (assessment.details?.attempts_count || 0)}</Text>
+              {t('exam.remaining', 'Remaining')}: <Text style={styles.remainingValue}>{Math.max(0, (assessment.details?.attempts_limit || 1) - (assessment.details?.attempts_count || 1))}</Text>
             </Text>
           </View>
         </View>

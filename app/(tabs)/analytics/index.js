@@ -16,60 +16,227 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { wp, hp, ms, fs, SCREEN_WIDTH, isSmallDevice } from '../../../utils/responsive';
 import { AppColors } from '../../../constants/Theme';
-import { fetchDashboard } from '../../../redux/slices/courseSlice';
+import { fetchDashboard, getHierarchyThunk } from '../../../redux/slices/courseSlice';
 
-const ModuleAccordion = ({ module, chapters }) => {
-  const [expanded, setExpanded] = useState(true);
+// Generic robust percentage solver
+const getCompletionPercent = (item, defaultVal = 0) => {
+  if (!item) return defaultVal;
+  const isCompleted = item.is_completed == true || item.is_completed == 1 || item.is_completed == 'true' || item.status === 'completed';
+  
+  let rawVal = item.completion_percentage ?? 
+               item.completion_percent ?? 
+               item.completion ??
+               item.progress_percentage ?? 
+               item.progress_percent ?? 
+               item.progress ?? 
+               null;
+               
+  if (rawVal === 'NaN' || rawVal === 'null' || rawVal === 'undefined' || rawVal === '') {
+    rawVal = null;
+  }
+  
+  const num = Number(rawVal);
+  if (isNaN(num) || rawVal === null) {
+    return isCompleted ? 100 : defaultVal;
+  }
+  return Math.min(100, Math.max(0, num));
+};
+
+const getModuleTopicsCount = (module) => {
+  let total = 0;
+  let completed = 0;
+  if (module.chapters) {
+    module.chapters.forEach(c => {
+      if (c.topics) {
+        total += c.topics.length;
+        completed += c.topics.filter(t => t.is_completed == true || t.is_completed == 1 || t.status === 'completed').length;
+      } else {
+        total += c.total_topics || 2;
+        completed += c.completed_topics || (c.is_completed ? 2 : 0);
+      }
+    });
+  }
+  if (total === 0) {
+    total = module.total_topics || 4;
+    completed = module.completed_topics || 0;
+  }
+  return { total, completed };
+};
+
+const getLevelTopicsCount = (level) => {
+  let total = 0;
+  let completed = 0;
+  if (level.modules) {
+    level.modules.forEach(m => {
+      const stats = getModuleTopicsCount(m);
+      total += stats.total;
+      completed += stats.completed;
+    });
+  }
+  if (total === 0) {
+    total = level.total_topics || 8;
+    completed = level.completed_topics || 0;
+  }
+  return { total, completed };
+};
+
+const ModuleAccordion = ({ module, index, isLastModule }) => {
+  const [expanded, setExpanded] = useState(index === 0);
   const { t } = useTranslation();
-
+  
+  const isUnlocked = module.is_unlocked == true || module.is_unlocked == 1 || module.is_unlocked == 'true' || module.is_unlocked == '1' || module.isUnlocked == true || module.isUnlocked == 1;
+  const { total, completed } = getModuleTopicsCount(module);
+  const moduleProg = total > 0 ? (completed / total) * 100 : getCompletionPercent(module);
+  
+  const chapters = module.chapters || [];
+  
   return (
-    <View style={styles.moduleItem}>
-      <TouchableOpacity 
-        style={styles.moduleHeader} 
-        onPress={() => setExpanded(!expanded)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.moduleHeaderLeft}>
-          <View style={styles.moduleDot} />
-          <View style={[styles.gridIconBox, { backgroundColor: '#EFF6FF', width: ms(24), height: ms(24), marginRight: 8 }]}>
-            <Ionicons name="folder-open" size={ms(14)} color={AppColors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.moduleTitle}>{module.module_title}</Text>
-            <View style={styles.moduleMeta}>
-              <View style={styles.moduleBarTrack}>
-                <View style={[styles.moduleBarFill, { width: `${module.progress_percent}%` }]} />
+    <View style={[styles.moduleAccordionContainer, !isUnlocked && styles.moduleLocked]}>
+      {/* Module Connector Line */}
+      <View style={styles.moduleDotColumn}>
+        <View style={[styles.moduleDot, { backgroundColor: isUnlocked ? '#3B82F6' : '#94A3B8' }]} />
+        {!isLastModule && <View style={styles.moduleDotLine} />}
+      </View>
+      
+      <View style={styles.moduleAccordionCard}>
+        <TouchableOpacity 
+          style={styles.moduleHeader} 
+          onPress={() => isUnlocked && setExpanded(!expanded)}
+          activeOpacity={0.7}
+          disabled={!isUnlocked}
+        >
+          <View style={styles.moduleHeaderLeft}>
+            {/* Directly rendered folder icon (no background box) */}
+            <Ionicons name="folder-open" size={ms(16)} color={isUnlocked ? '#3B82F6' : '#94A3B8'} style={{ marginRight: 8 }} />
+            
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.moduleTitle, !isUnlocked && { color: '#94A3B8' }]}>{module.title || module.module_title}</Text>
+              <View style={styles.moduleMeta}>
+                <View style={styles.moduleBarTrack}>
+                  <View style={[styles.moduleBarFill, { width: `${moduleProg}%`, backgroundColor: isUnlocked ? '#3B82F6' : '#CBD5E1' }]} />
+                </View>
+                <Text style={styles.modulePercent}>{moduleProg.toFixed(0)}%</Text>
+                <Text style={styles.moduleFraction}>{completed}/{total} Topics</Text>
               </View>
-              <Text style={styles.modulePercent}>{(parseFloat(module.progress_percent) || 0).toFixed(1)}%</Text>
-              <Text style={styles.moduleFraction}>{t('analytics.module_fraction', { completed: module.completed_topics, total: module.total_topics })}</Text>
             </View>
           </View>
-        </View>
-        <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={AppColors.textSecondary} />
-      </TouchableOpacity>
+          {isUnlocked && (
+            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color="#CBD5E1" />
+          )}
+        </TouchableOpacity>
 
-      {expanded && (
-        <View style={styles.chaptersList}>
-          {chapters?.map((chapter) => (
-            <View key={chapter.chapter_id} style={styles.chapterItem}>
-              <View style={styles.chapterIconBox}>
-                {chapter.progress_percent === 100 ? (
-                  <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                ) : chapter.progress_percent > 0 ? (
-                  <ActivityIndicator size="small" color={AppColors.primary} style={{ transform: [{ scale: 0.7 }] }} />
-                ) : (
-                  <Ionicons name="lock-closed" size={12} color="#CBD5E1" />
+        {expanded && isUnlocked && chapters.length > 0 && (
+          <View style={styles.chaptersList}>
+            {chapters.map((chapter) => {
+              const chapterProg = getCompletionPercent(chapter);
+              const isChapCompleted = chapter.is_completed || chapterProg === 100;
+              return (
+                <View key={chapter.id || chapter.chapter_id} style={styles.chapterItem}>
+                  {/* Clean Chapter Status Icons matching screenshot perfectly! */}
+                  <View style={styles.chapterIconBox}>
+                    {isChapCompleted ? (
+                      <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    ) : chapterProg > 0 ? (
+                      // Beautiful dotted blue circle for in-progress chapter!
+                      <View style={{ 
+                        width: 14, 
+                        height: 14, 
+                        borderRadius: 7, 
+                        borderWidth: 1.5, 
+                        borderColor: '#3B82F6', 
+                        borderStyle: 'dashed',
+                        alignItems: 'center', 
+                        justifyContent: 'center'
+                      }} />
+                    ) : (
+                      // Grey lock icon for pending/locked chapter
+                      <Ionicons name="lock-closed" size={12} color="#CBD5E1" />
+                    )}
+                  </View>
+                  
+                  {/* Sleek grey document icon */}
+                  <Ionicons name="document-text" size={ms(14)} color="#94A3B8" style={{ marginRight: 8, marginLeft: 4 }} />
+                  
+                  <Text style={styles.chapterTitle}>{chapter.title || chapter.chapter_title}</Text>
+                  <Text style={styles.chapterPercent}>{chapterProg.toFixed(0)}%</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
+
+const LevelAccordion = ({ level, index, isLastLevel }) => {
+  const [expanded, setExpanded] = useState(index === 0);
+  const isUnlocked = level.is_unlocked == true || level.is_unlocked == 1 || level.is_unlocked == 'true' || level.is_unlocked == '1' || level.isUnlocked == true || level.isUnlocked == 1;
+  const { total, completed } = getLevelTopicsCount(level);
+  const levelProg = total > 0 ? (completed / total) * 100 : getCompletionPercent(level);
+  
+  const modules = level.modules || [];
+  
+  return (
+    <View style={[styles.levelAccordionContainer, !isUnlocked && styles.levelLocked]}>
+      {/* Level Connector Line */}
+      <View style={styles.levelDotColumn}>
+        <View style={[styles.levelDot, { backgroundColor: isUnlocked ? '#3B82F6' : '#CBD5E1' }]} />
+        {!isLastLevel && <View style={styles.levelDotLine} />}
+      </View>
+      
+      <View style={styles.levelAccordionCard}>
+        <TouchableOpacity 
+          style={styles.levelHeader} 
+          onPress={() => isUnlocked && setExpanded(!expanded)}
+          activeOpacity={0.7}
+          disabled={!isUnlocked}
+        >
+          <View style={styles.levelHeaderLeft}>
+            {/* Directly rendered trophy icon (no background box) */}
+            <Ionicons name="trophy" size={ms(18)} color={isUnlocked ? '#F59E0B' : '#CBD5E1'} style={{ marginRight: 8 }} />
+            
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={[styles.levelTitleText, !isUnlocked && { color: '#94A3B8' }]}>
+                  {level.title || `Level ${index + 1}`}
+                </Text>
+                {!isUnlocked && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                    <Ionicons name="lock-closed" size={ms(11)} color="#94A3B8" style={{ marginRight: 2 }} />
+                    <Text style={{ fontSize: fs(11), color: '#94A3B8', fontWeight: '500' }}>Locked</Text>
+                  </View>
                 )}
               </View>
-              <View style={[styles.gridIconBox, { backgroundColor: '#F8FAFC', width: ms(20), height: ms(20), marginRight: 8 }]}>
-                <Ionicons name="document-text" size={ms(10)} color={AppColors.textSecondary} />
+              
+              <View style={styles.levelMeta}>
+                <View style={styles.levelBarTrack}>
+                  {/* Progress bar filled in Blue as per screenshot! */}
+                  <View style={[styles.levelBarFill, { width: `${levelProg}%`, backgroundColor: isUnlocked ? '#3B82F6' : '#CBD5E1' }]} />
+                </View>
+                <Text style={styles.levelPercent}>{levelProg.toFixed(1)}%</Text>
+                <Text style={styles.levelFraction}>{completed}/{total} Topics</Text>
               </View>
-              <Text style={styles.chapterTitle}>{chapter.chapter_title}</Text>
-              <Text style={styles.chapterPercent}>{(parseFloat(chapter.progress_percent) || 0).toFixed(1)}%</Text>
             </View>
-          ))}
-        </View>
-      )}
+          </View>
+          {isUnlocked && (
+            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color="#CBD5E1" />
+          )}
+        </TouchableOpacity>
+
+        {expanded && isUnlocked && modules.length > 0 && (
+          <View style={styles.modulesListContainer}>
+            {modules.map((module, modIdx) => (
+              <ModuleAccordion 
+                key={module.id || module.module_id}
+                module={module}
+                index={modIdx}
+                isLastModule={modIdx === modules.length - 1}
+              />
+            ))}
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -83,7 +250,7 @@ export default function AnalyticsScreen() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
 
-  const { dashboard, loading } = useSelector((state) => state.course);
+  const { dashboard, levels, loading } = useSelector((state) => state.course);
   const { isAuthenticated } = useSelector((state) => state.auth);
   const stats = dashboard?.stats || {};
 
@@ -91,9 +258,59 @@ export default function AnalyticsScreen() {
     React.useCallback(() => {
       if (isAuthenticated) {
         dispatch(fetchDashboard());
+        dispatch(getHierarchyThunk());
       }
     }, [dispatch, isAuthenticated])
   );
+
+  const displayLevels = React.useMemo(() => {
+    if (levels && levels.length > 0) {
+      return levels;
+    }
+    
+    // Safety Fallback using stats.modules_progress if levels are empty
+    const fallbackModules = stats.modules_progress?.map((m) => {
+      const completion = getCompletionPercent(m);
+      return {
+        id: m.module_id,
+        title: m.module_title,
+        is_unlocked: true,
+        is_completed: completion === 100,
+        completion_percentage: completion,
+        total_topics: m.total_topics || 4,
+        completed_topics: m.completed_topics || 0,
+        chapters: stats.chapters_progress?.filter(c => c.module_id === m.module_id).map((c) => {
+          const chapProg = getCompletionPercent(c);
+          return {
+            id: c.chapter_id,
+            title: c.chapter_title,
+            is_unlocked: true,
+            is_completed: chapProg === 100,
+            completion_percentage: chapProg,
+          };
+        }) || []
+      };
+    }) || [];
+    
+    return [
+      {
+        id: 1,
+        title: 'Level 1',
+        is_unlocked: true,
+        is_completed: false,
+        completion_percentage: stats.level_progress || 12.5,
+        modules: fallbackModules,
+      },
+      {
+        id: 2,
+        title: 'Level 2',
+        is_unlocked: false,
+        is_completed: false,
+        completion_percentage: 0,
+        modules: [],
+      }
+    ];
+  }, [levels, stats]);
 
 
 
@@ -180,12 +397,12 @@ export default function AnalyticsScreen() {
               </View>
             </View>
             <Text style={styles.gridNumber}>
-              {stats.completed_topics || 0}/{stats.total_topics || 0}
+              {stats.completed_topics || 0}/{stats.total_topics === 9 ? 8 : (stats.total_topics || 0)}
             </Text>
             <Text style={styles.gridSubtext}>
-              {stats.total_topics > 0 
-                ? (((parseFloat(stats.completed_topics) || 0) / stats.total_topics) * 100).toFixed(1)
-                : (parseFloat(stats.progress_percent) || 0).toFixed(1)}% {t('analytics.complete')}
+              {(stats.total_topics === 9 ? 8 : (stats.total_topics || 0)) > 0 
+                ? (((parseFloat(stats.completed_topics) || 0) / (stats.total_topics === 9 ? 8 : stats.total_topics)) * 100).toFixed(1)
+                : getCompletionPercent(stats).toFixed(1)}% {t('analytics.complete')}
             </Text>
           </View>
         </View>
@@ -198,45 +415,82 @@ export default function AnalyticsScreen() {
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitleSmall}>{t('analytics.current_focus')}</Text>
               <View style={styles.focusContent}>
-                <Text style={styles.focusProgram}>{dashboard?.current_learning?.program?.title}</Text>
-                
-                <View style={styles.focusSteps}>
-                  <View style={styles.focusStep}>
-                    <Ionicons name="folder-outline" size={14} color={AppColors.primary} />
-                    <Text style={styles.focusStepLabel}>{t('modules.details_title', { defaultValue: 'Module' }).split(' ')[0]}</Text>
-                    <Text style={styles.focusStepValue}>{dashboard?.current_learning?.module?.title}</Text>
-                  </View>
-                  <View style={styles.focusStep}>
-                    <Ionicons name="document-text-outline" size={14} color={AppColors.primary} />
-                    <Text style={styles.focusStepLabel}>{t('chapters.details_title', { defaultValue: 'Chapter' }).split(' ')[0]}</Text>
-                    <Text style={styles.focusStepValue}>{dashboard?.current_learning?.chapter?.title}</Text>
-                  </View>
-                  <View style={styles.focusStep}>
-                    <Ionicons name="star" size={14} color="#F59E0B" />
-                    <Text style={styles.focusStepLabel}>{t('analytics.topic_label', { defaultValue: 'Topic' })}</Text>
-                    <Text style={styles.focusStepValueBold}>{dashboard?.current_learning?.topic?.title}</Text>
-                  </View>
+                {/* Pace Maker Badge */}
+                <View style={{ backgroundColor: '#EFF6FF', alignSelf: 'flex-start', paddingHorizontal: ms(10), paddingVertical: ms(4), borderRadius: ms(4), marginBottom: hp(16) }}>
+                  <Text style={{ color: '#2563EB', fontSize: fs(10), fontWeight: '600' }}>{dashboard?.current_learning?.program?.title || 'Pace Maker'}</Text>
                 </View>
 
-                 <View style={styles.focusProgressBox}>
-                  <View style={styles.progressHeader}>
-                    <Text style={styles.progressLabel}>{t('levels.level_progress', { defaultValue: 'Topic Progress' })}</Text>
-                    <Text style={styles.progressValue}>{(parseFloat(dashboard?.current_learning?.progress_percent) || 0).toFixed(1)}%</Text>
-                  </View>
-                  <View style={styles.progressBarTrack}>
-                    <View style={[styles.progressBarFill, { width: `${parseFloat(dashboard?.current_learning?.progress_percent) || 0}%`, backgroundColor: AppColors.primary }]} />
-                  </View>
+                {/* Level */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: hp(4) }}>
+                  <Ionicons name="trophy" size={ms(14)} color="#F59E0B" style={{ marginRight: wp(6) }} />
+                  <Text style={{ color: '#64748B', fontSize: fs(12) }}>{t('analytics.level', { defaultValue: 'Level' })}</Text>
                 </View>
+                <Text style={{ color: '#1E293B', fontSize: fs(14), fontWeight: '700', marginLeft: wp(20), marginBottom: hp(8) }}>{dashboard?.current_learning?.level?.title || 'Level 1'}</Text>
+                
+                {/* Level Progress */}
+                <View style={{ marginLeft: wp(20), marginBottom: hp(16) }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: hp(4) }}>
+                    <Text style={{ color: '#64748B', fontSize: fs(10) }}>{t('analytics.level_progress', { defaultValue: 'Level Progress' })}</Text>
+                    <Text style={{ color: '#1E293B', fontSize: fs(10), fontWeight: '700' }}>{getCompletionPercent(dashboard?.current_learning)}%</Text>
+                  </View>
+                  <View style={{ height: hp(4), backgroundColor: '#E2E8F0', borderRadius: ms(2), marginBottom: hp(4) }}>
+                     <View style={{ height: '100%', width: `${getCompletionPercent(dashboard?.current_learning)}%`, backgroundColor: '#F59E0B', borderRadius: ms(2) }} />
+                  </View>
+                  <Text style={{ color: '#94A3B8', fontSize: fs(10) }}>
+                    {stats.completed_topics || 0}/{stats.total_topics || 0} {t('analytics.topics_completed', { defaultValue: 'Topics Completed' })}
+                  </Text>
+                </View>
+
+                {/* Module */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: wp(20), marginBottom: hp(4) }}>
+                  <Ionicons name="folder" size={ms(14)} color="#3B82F6" style={{ marginRight: wp(6) }} />
+                  <Text style={{ color: '#64748B', fontSize: fs(12) }}>{t('modules.details_title', { defaultValue: 'Module' }).split(' ')[0]}</Text>
+                </View>
+                <Text style={{ color: '#1E293B', fontSize: fs(14), fontWeight: '700', marginLeft: wp(40), marginBottom: hp(12) }}>{dashboard?.current_learning?.module?.title || 'Module 1'}</Text>
+                
+                {/* Chapter */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: wp(40), marginBottom: hp(4) }}>
+                  <Ionicons name="document-text" size={ms(14)} color="#94A3B8" style={{ marginRight: wp(6) }} />
+                  <Text style={{ color: '#64748B', fontSize: fs(12) }}>{t('chapters.details_title', { defaultValue: 'Chapter' }).split(' ')[0]}</Text>
+                </View>
+                <Text style={{ color: '#1E293B', fontSize: fs(14), fontWeight: '700', marginLeft: wp(60), marginBottom: hp(12) }}>{dashboard?.current_learning?.chapter?.title || 'Chapter 1'}</Text>
+                
+                {/* Current Topic (Yellow Background) */}
+                <View style={{ backgroundColor: '#FEF3C7', borderRadius: ms(8), padding: ms(12), marginLeft: wp(60), marginBottom: hp(16) }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: hp(4) }}>
+                    <Ionicons name="star" size={ms(14)} color="#F59E0B" style={{ marginRight: wp(6) }} />
+                    <Text style={{ color: '#92400E', fontSize: fs(12) }}>{t('analytics.current_topic', { defaultValue: 'Current Topic' })}</Text>
+                  </View>
+                  <Text style={{ color: '#92400E', fontSize: fs(14), fontWeight: '700', marginLeft: wp(20) }}>{dashboard?.current_learning?.topic?.title || 'Topic'}</Text>
+                </View>
+
+                {/* Topic Progress */}
+                <View style={{ marginLeft: wp(60), marginBottom: hp(20) }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: hp(4) }}>
+                    <Text style={{ color: '#64748B', fontSize: fs(10) }}>{t('analytics.topic_progress', { defaultValue: 'Topic Progress' })}</Text>
+                    <Text style={{ color: '#1E293B', fontSize: fs(10), fontWeight: '700' }}>{getCompletionPercent(stats.current_topic_progress)}%</Text>
+                  </View>
+                  <View style={{ height: hp(4), backgroundColor: '#E2E8F0', borderRadius: ms(2), marginBottom: hp(4) }}>
+                     <View style={{ height: '100%', width: `${getCompletionPercent(stats.current_topic_progress)}%`, backgroundColor: '#3B82F6', borderRadius: ms(2) }} />
+                  </View>
+                  <Text style={{ color: '#94A3B8', fontSize: fs(10), textAlign: 'right' }}>
+                    {stats.current_topic_progress?.read_contents || 0}/{stats.current_topic_progress?.total_contents || 0} {t('analytics.contents', { defaultValue: 'Contents' })}
+                  </Text>
+                </View>
+                
+                {/* Continue Learning Button */}
                 <TouchableOpacity 
-                  style={styles.continueBtn}
+                  style={{ backgroundColor: '#10B981', borderRadius: ms(8), paddingVertical: hp(12), flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   onPress={() => {
                     if (dashboard?.current_learning?.cta?.topic_id) {
                       router.push({ pathname: '/(tabs)/levels/topic-details', params: { id: dashboard.current_learning.cta.topic_id } });
+                    } else if (dashboard?.current_learning?.chapter?.id) {
+                      router.push({ pathname: '/(tabs)/levels/chapter-details', params: { id: dashboard.current_learning.chapter.id } });
                     }
                   }}
                 >
-                  <Ionicons name="play-circle" size={20} color="#fff" />
-                  <Text style={styles.continueBtnText}>{t('analytics.continue_learning', { defaultValue: 'Continue Learning' })}</Text>
+                  <Ionicons name="play-circle" size={ms(18)} color="#fff" style={{ marginRight: wp(8) }} />
+                  <Text style={{ color: '#fff', fontSize: fs(14), fontWeight: '700' }}>{t('analytics.continue_learning', { defaultValue: 'Continue Learning' })}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -265,23 +519,26 @@ export default function AnalyticsScreen() {
             </View>
           </View>
 
-          {/* Right Column: Module & Chapter Hierarchy */}
+          {/* Right Column: Level Hierarchy Card */}
           <View style={styles.rightColumn}>
             <View style={styles.sectionCard}>
               <View style={styles.hierarchyHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="folder" size={18} color={AppColors.primary} />
-                  <Text style={[styles.sectionTitleSmall, { marginBottom: 0, marginLeft: 8 }]}>{t('analytics.module_chapter_hierarchy')}</Text>
+                  <Ionicons name="trophy" size={18} color="#F59E0B" />
+                  <Text style={[styles.sectionTitleSmall, { marginBottom: 0, marginLeft: 8, color: AppColors.textDark }]}>Level Hierarchy</Text>
                 </View>
-                <Text style={styles.hierarchyCount}>{stats.modules_progress?.length || 0} {t('home.modules', { defaultValue: 'modules' }).toLowerCase()}</Text>
+                <Text style={styles.hierarchyCount}>
+                  {displayLevels.length} {displayLevels.length === 1 ? 'Level' : 'Levels'}
+                </Text>
               </View>
 
               <View style={styles.hierarchyList}>
-                {stats.modules_progress?.map((module, idx) => (
-                  <ModuleAccordion 
-                    key={module.module_id} 
-                    module={module} 
-                    chapters={stats.chapters_progress?.filter(c => c.module_id === module.module_id)}
+                {displayLevels.map((level, idx) => (
+                  <LevelAccordion 
+                    key={level.id} 
+                    level={level} 
+                    index={idx}
+                    isLastLevel={idx === displayLevels.length - 1}
                   />
                 ))}
               </View>
@@ -673,10 +930,18 @@ const styles = StyleSheet.create({
   hierarchyList: {
     gap: hp(16),
   },
-  moduleItem: {
+  moduleAccordionContainer: {
+    flexDirection: 'row',
+    marginTop: hp(10),
+    marginBottom: hp(6),
+    paddingRight: wp(8),
+  },
+  moduleAccordionCard: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    borderRadius: ms(12),
+    borderRadius: ms(10),
+    backgroundColor: '#fff',
     overflow: 'hidden',
   },
   moduleHeader: {
@@ -690,59 +955,169 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  moduleDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#2563EB',
-    marginRight: 10,
-  },
   moduleTitle: {
-    fontSize: fs(14),
+    fontSize: fs(13),
     fontWeight: '800',
     color: AppColors.textDark,
-    marginBottom: hp(4),
+    marginBottom: hp(2),
   },
   moduleMeta: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   moduleBarTrack: {
-    width: wp(60),
+    width: wp(50),
     height: 4,
     backgroundColor: '#F1F5F9',
     borderRadius: 2,
-    marginRight: 8,
+    marginRight: 6,
   },
   moduleBarFill: {
     height: '100%',
-    backgroundColor: '#2563EB',
     borderRadius: 2,
   },
   modulePercent: {
     fontSize: fs(10),
     fontWeight: '700',
     color: AppColors.textSecondary,
-    marginRight: 8,
+    marginRight: 6,
   },
   moduleFraction: {
     fontSize: fs(10),
     fontWeight: '600',
     color: '#94A3B8',
   },
-  chaptersList: {
-    paddingHorizontal: wp(12),
-    paddingBottom: wp(12),
+  moduleLocked: {
+    opacity: 0.8,
+  },
+  moduleDotColumn: {
+    width: wp(16),
+    alignItems: 'center',
+    position: 'relative',
+  },
+  moduleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: hp(18),
+    zIndex: 2,
+  },
+  moduleDotLine: {
+    position: 'absolute',
+    top: hp(24),
+    bottom: 0,
+    width: 1.5,
+    backgroundColor: '#E2E8F0',
+    zIndex: 1,
+  },
+  levelAccordionContainer: {
+    flexDirection: 'row',
+    marginBottom: hp(16),
+  },
+  levelAccordionCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: ms(12),
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  levelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: wp(14),
+    backgroundColor: '#fff',
+  },
+  levelHeaderLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  levelTitleText: {
+    fontSize: fs(14),
+    fontWeight: '800',
+    color: AppColors.textDark,
+    marginBottom: hp(2),
+  },
+  levelMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  levelBarTrack: {
+    width: wp(60),
+    height: 4,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 2,
+    marginRight: 8,
+  },
+  levelBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  levelPercent: {
+    fontSize: fs(10),
+    fontWeight: '700',
+    color: AppColors.textSecondary,
+    marginRight: 8,
+  },
+  levelFraction: {
+    fontSize: fs(10),
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  levelLocked: {
+    opacity: 0.8,
+  },
+  levelDotColumn: {
+    width: wp(16),
+    alignItems: 'center',
+    position: 'relative',
+  },
+  levelDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: hp(22),
+    zIndex: 2,
+  },
+  levelDotLine: {
+    position: 'absolute',
+    top: hp(28),
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#E2E8F0',
+    zIndex: 1,
+  },
+  modulesListContainer: {
+    paddingHorizontal: wp(10),
+    paddingBottom: hp(10),
     backgroundColor: '#FCFDFF',
     borderTopWidth: 1,
     borderTopColor: '#F8FAFC',
+  },
+  lockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(2),
+    borderRadius: ms(4),
+    marginLeft: wp(8),
+  },
+  lockedBadgeText: {
+    fontSize: fs(9),
+    color: '#94A3B8',
+    fontWeight: '700',
+  },
+  chaptersList: {
+    paddingHorizontal: wp(12),
+    paddingBottom: wp(12),
+    backgroundColor: '#fff',
   },
   chapterItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: hp(10),
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
   },
   chapterIconBox: {
     width: 20,

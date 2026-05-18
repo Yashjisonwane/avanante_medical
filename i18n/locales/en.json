@@ -54,7 +54,8 @@
     "permission_camera_required": "Please grant camera permissions to upload a photo.",
     "permission_gallery_required": "Please grant gallery permissions to upload a photo.",
     "change_language": "Change Language",
-    "password_mismatch": "Password and confirm password must match."
+    "password_mismatch": "Password and confirm password must match.",
+    "view": "View"
   },
   "auth": {
     "login_button": "Sign In",

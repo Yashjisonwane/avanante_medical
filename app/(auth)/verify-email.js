@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   primaryBtn: {
-    backgroundColor: '#10B981',
+    backgroundColor: AppColors.primary,
     width: '100%',
     paddingVertical: hp(16),
     borderRadius: ms(12),
